@@ -73,6 +73,13 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }
     }
 
+    @Override
+    public void onViewRecycled(ViewHolder holder) {
+        super.onViewRecycled(holder);
+        Log.v(TAG,"in onViewRecycled");
+//        mImageManager.cancelTask(holder.imageView);
+    }
+
     private void loadData() {
         Cursor cur = null;
         ContentResolver contentResolver = mContext.getContentResolver();
@@ -88,7 +95,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 //                }
 //            }
 //        }
-        if (cur.moveToLast()) {
+        if (cur != null && cur.moveToLast()) {
             while (cur.moveToPrevious()) {
                 String data = cur.getString(PROJECTION_DATA);
                 if (data != null) {
@@ -99,7 +106,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
         uri = MediaStore.Images.Media.INTERNAL_CONTENT_URI;
         cur = contentResolver.query(uri, projection, null, null, MediaStore.Images.Media.TITLE);
-        if (cur.moveToFirst()) {
+        if (cur != null && cur.moveToFirst()) {
             while (cur.moveToNext()) {
                 String data = cur.getString(PROJECTION_DATA);
                 if (data != null) {
