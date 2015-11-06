@@ -56,7 +56,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         Log.v(TAG,"in onBindViewHolder " + position);
-        mImageManager.loadImage(mData.get(position), holder.imageView);
+        mImageManager.loadImage(position,mData.get(position),holder);
     }
 
     @Override
@@ -71,12 +71,13 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             super(view);
             imageView = (ImageView) view.findViewById(R.id.imageview);
         }
+
     }
 
     @Override
     public void onViewRecycled(ViewHolder holder) {
         super.onViewRecycled(holder);
-        Log.v(TAG,"in onViewRecycled");
+        Log.v(TAG, "in onViewRecycled");
 //        mImageManager.cancelTask(holder.imageView);
     }
 

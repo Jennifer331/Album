@@ -81,7 +81,7 @@ public class ImageManager {
                 switch (msg.what) {
                     case START_DECODE: {
                         ImageTask task = (ImageTask) msg.obj;
-                        ImageView imageView = task.getmImageView();
+                        ImageView imageView = task.getmViewHolder().imageView;
                         Drawable drawable = imageView.getDrawable();
                         if (drawable instanceof AsyncDrawable) {
                             ((AsyncDrawable) drawable)
@@ -91,9 +91,12 @@ public class ImageManager {
                     }
                     case DECODE_DONE: {
                         ImageTask task = (ImageTask) msg.obj;
-                        ImageView imageView = task.getmImageView();
-                        imageView.setImageBitmap(task.getmBitmap());
-                        imageView.invalidate();
+                        ImageAdapter.ViewHolder viewHolder = task.getmViewHolder();
+                        if(task.getmPosition() == viewHolder.getPosition()) {
+                            ImageView imageView = viewHolder.imageView;
+                            imageView.setImageBitmap(task.getmBitmap());
+                            imageView.invalidate();
+                        }
                         break;
                     }
                 }
@@ -144,7 +147,8 @@ public class ImageManager {
         updateThreadMessage.sendToTarget();
     }
 
-    public void loadImage(String imagePath, ImageView imageview) {
+    public void loadImage(int position,String imagePath, ImageAdapter.ViewHolder viewHolder) {
+        ImageView imageview = viewHolder.imageView;
         // find the image in to memory first
         if (mMemoryCache != null) {
             Bitmap bitmap = mMemoryCache.get(imagePath);
@@ -155,7 +159,7 @@ public class ImageManager {
         }
 
         // not in memory,start loading
-        final ImageTask task = new ImageTask(imagePath, imageview);
+        final ImageTask task = new ImageTask(position,imagePath, viewHolder);
         Resources resources = imageview.getResources();
         AsyncDrawable asyncDrawable = new AsyncDrawable(resources,
                 BitmapFactory.decodeResource(resources, R.drawable.empty_photo), imagePath);
@@ -187,7 +191,7 @@ public class ImageManager {
     }
 
     private ImageView getAttachedImageView(Thread currentThread, ImageTask task) {
-        ImageView imageView = task.getmImageView();
+        ImageView imageView = task.getmViewHolder().imageView;
         Drawable drawable = imageView.getDrawable();
         if (drawable instanceof AsyncDrawable) {
             Thread thread = ((AsyncDrawable) drawable).getBitmapWorkerTask();
