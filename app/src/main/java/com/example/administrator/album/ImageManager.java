@@ -156,13 +156,14 @@ public class ImageManager {
 
         // not in memory,start loading
         final ImageTask task = new ImageTask(imagePath, imageview);
-        // add the task to the thread pool for execution
-        mInstance.mDecodeThreadPool.execute(new ImageDecodeRunnable(task));
         Resources resources = imageview.getResources();
         AsyncDrawable asyncDrawable = new AsyncDrawable(resources,
                 BitmapFactory.decodeResource(resources, R.drawable.empty_photo), imagePath);
         // set the placeholder of the loading image
         imageview.setImageDrawable(asyncDrawable);
+        // add the task to the thread pool for execution
+        mInstance.mDecodeThreadPool.execute(new ImageDecodeRunnable(task));
+
     }
 
     public void handleDone(ImageTask task, Thread currentThread, Bitmap bitmap) {
