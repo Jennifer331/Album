@@ -1,5 +1,6 @@
 package com.example.administrator.album;
 
+import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -9,6 +10,7 @@ import android.media.Image;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 import android.util.LruCache;
 import android.widget.ImageView;
 
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
  * Created by Lei Xiaoyue on 2015-11-05.
  */
 public class ImageManager {
+    private static final String TAG = "ImageDecodeCancelled";
     // Sets the amount of time an idle thread will wati for a task before
     // terminating
     private static final int KEEP_ALIVE_TIME = 1;
@@ -31,12 +34,14 @@ public class ImageManager {
     private static final int DECODE_DONE = 1;
 
     // the size of memory
-    private static final int DEFAULT_MEM_SIZE = 1024 * 5;// 1MB
+    private static final int DEFAULT_MEM_SIZE = 1024 * 5;// 5MB
 
     // Sets the Time Unit to seconds
     private static final TimeUnit KEEP_ALICE_TIME_UNIT;
 
     private static int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
+
+    private static Context mContext;
 
     private final BlockingQueue<Runnable> mDecodeWorkQueue;
 
@@ -80,22 +85,19 @@ public class ImageManager {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case START_DECODE: {
-                        ImageTask task = (ImageTask) msg.obj;
-                        ImageView imageView = task.getmViewHolder().imageView;
-                        Drawable drawable = imageView.getDrawable();
-                        if (drawable instanceof AsyncDrawable) {
-                            ((AsyncDrawable) drawable)
-                                    .setBitmapWorkerTask(task.getmCurrentThread());
-                        }
                         break;
                     }
                     case DECODE_DONE: {
                         ImageTask task = (ImageTask) msg.obj;
                         ImageAdapter.ViewHolder viewHolder = task.getmViewHolder();
-                        if(task.getmPosition() == viewHolder.getPosition()) {
+                        if (task.getmPosition() == viewHolder.getPosition()) {
                             ImageView imageView = viewHolder.imageView;
-                            imageView.setImageBitmap(task.getmBitmap());
-                            imageView.invalidate();
+                            if (mContext != null && task.hasmBitmap()) {
+                                Drawable drawable = new BitmapDrawable(mContext.getResources(),
+                                        task.getmBitmap());
+                                imageView.setImageDrawable(drawable);
+                                imageView.invalidate();
+                            }
                         }
                         break;
                     }
@@ -104,25 +106,23 @@ public class ImageManager {
         };
     }
 
-    public static void cancelTask(ImageView imageView) {
-        if (imageView == null) {
+    public static void setContext(Context context) {
+        mContext = context;
+    }
+
+    public static void cancelTask(ImageAdapter.ViewHolder viewHolder) {
+        if (viewHolder == null || viewHolder.imageView == null) {
             return;
         }
-        String imagePath = null;
-        Drawable drawable = imageView.getDrawable();
-        if (drawable instanceof AsyncDrawable) {
-            imagePath = ((AsyncDrawable) drawable).getmImagePath();
-        }
+        int cancelPosition = viewHolder.getPosition();
 
         ImageDecodeRunnable[] runnableArray = new ImageDecodeRunnable[mInstance.mDecodeWorkQueue
                 .size()];
         mInstance.mDecodeWorkQueue.toArray(runnableArray);
         synchronized (mInstance) {
             for (ImageDecodeRunnable runnable : runnableArray) {
-                Thread thread = runnable.getmImageTask().getmCurrentThread();
-                if (null != thread && imagePath != null
-                        && runnable.getmImageTask().getmImagePath().equals(imagePath)) {
-                    thread.interrupt();
+                if(runnable.getmImageTask().getmPosition() == cancelPosition) {
+                    mInstance.mDecodeThreadPool.remove(runnable);
                 }
             }
         }
@@ -134,10 +134,7 @@ public class ImageManager {
         mInstance.mDecodeWorkQueue.toArray(runnableArray);
         synchronized (mInstance) {
             for (ImageDecodeRunnable runnable : runnableArray) {
-                Thread thread = runnable.getmImageTask().getmCurrentThread();
-                if (null != thread) {
-                    thread.interrupt();
-                }
+                mInstance.mDecodeThreadPool.remove(runnable);
             }
         }
     }
@@ -147,7 +144,7 @@ public class ImageManager {
         updateThreadMessage.sendToTarget();
     }
 
-    public void loadImage(int position,String imagePath, ImageAdapter.ViewHolder viewHolder) {
+    public void loadImage(int position, String imagePath, ImageAdapter.ViewHolder viewHolder) {
         ImageView imageview = viewHolder.imageView;
         // find the image in to memory first
         if (mMemoryCache != null) {
@@ -159,10 +156,10 @@ public class ImageManager {
         }
 
         // not in memory,start loading
-        final ImageTask task = new ImageTask(position,imagePath, viewHolder);
+        final ImageTask task = new ImageTask(position, imagePath, viewHolder);
         Resources resources = imageview.getResources();
         AsyncDrawable asyncDrawable = new AsyncDrawable(resources,
-                BitmapFactory.decodeResource(resources, R.drawable.empty_photo), imagePath);
+                BitmapFactory.decodeResource(resources, R.drawable.empty_photo), task);
         // set the placeholder of the loading image
         imageview.setImageDrawable(asyncDrawable);
         // add the task to the thread pool for execution
@@ -182,24 +179,12 @@ public class ImageManager {
         }
 
         // refresh the view
-        ImageView imageView = getAttachedImageView(currentThread, task);
+        ImageView imageView = task.getmViewHolder().imageView;
         if (bitmap != null && imageView != null) {
             task.setmBitmap(bitmap);
             Message comleteMessage = mHandler.obtainMessage(DECODE_DONE, task);
             comleteMessage.sendToTarget();
         }
-    }
-
-    private ImageView getAttachedImageView(Thread currentThread, ImageTask task) {
-        ImageView imageView = task.getmViewHolder().imageView;
-        Drawable drawable = imageView.getDrawable();
-        if (drawable instanceof AsyncDrawable) {
-            Thread thread = ((AsyncDrawable) drawable).getBitmapWorkerTask();
-            if (currentThread == thread) {
-                return imageView;
-            }
-        }
-        return null;
     }
 
     /**
@@ -210,26 +195,15 @@ public class ImageManager {
      * finish order.
      */
     private static class AsyncDrawable extends BitmapDrawable {
-        private WeakReference<Thread> mImageTaskReference;
-        private String mImagePath;
+        private final WeakReference<ImageTask> mImageTaskReference;
 
-        public AsyncDrawable(Resources res, Bitmap bitmap, String imagePath) {
+        public AsyncDrawable(Resources res, Bitmap bitmap, ImageTask task) {
             super(res, bitmap);
-            mImagePath = imagePath;
-            mImageTaskReference = new WeakReference<Thread>(null);
+            mImageTaskReference = new WeakReference<ImageTask>(task);
         }
 
-        public void setBitmapWorkerTask(Thread thread) {
-            mImageTaskReference = new WeakReference<Thread>(thread);
-        }
-
-        public Thread getBitmapWorkerTask() {
-
+        public ImageTask getmImageTaskReference() {
             return mImageTaskReference.get();
-        }
-
-        public String getmImagePath() {
-            return mImagePath;
         }
     }
 

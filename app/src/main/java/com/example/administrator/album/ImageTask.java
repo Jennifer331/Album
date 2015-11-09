@@ -13,7 +13,7 @@ public class ImageTask implements ImageProcessTaskMethod{
 //    private ImageView mImageView;
     private int mPosition;
     private ViewHolder mViewHolder;
-    private Thread mCurrentThread;
+//    private Thread mCurrentThread;
     private Bitmap mBitmap;
 
     private ImageManager mImageManager;
@@ -27,15 +27,15 @@ public class ImageTask implements ImageProcessTaskMethod{
         mViewHolder = viewHolder;
         mImageManager = ImageManager.getInstance();
     }
-    @Override
-    public void setWorkingThread(Thread thread){
-        mCurrentThread = thread;
-        mImageManager.setRunningThread(this);
-    }
+//    @Override
+//    public void setWorkingThread(Thread thread){
+//        mCurrentThread = thread;
+//        mImageManager.setRunningThread(this);
+//    }
 
     @Override
     public void handleDone(Thread currentThread,Bitmap bitmap) {
-        mImageManager.handleDone(this,currentThread,bitmap);
+        mImageManager.handleDone(this, currentThread, bitmap);
     }
 
     public String getmImagePath(){
@@ -46,8 +46,12 @@ public class ImageTask implements ImageProcessTaskMethod{
         return mViewHolder;
     }
 
-    public Thread getmCurrentThread(){
-        return mCurrentThread;
+//    public Thread getmCurrentThread(){
+//        return mCurrentThread;
+//    }
+
+    public boolean hasmBitmap(){
+        return mBitmap == null? false : true;
     }
 
     public Bitmap getmBitmap() {
@@ -61,4 +65,8 @@ public class ImageTask implements ImageProcessTaskMethod{
     public int getmPosition() {
         return mPosition;
     }
+
+//    public void setmCurrentThread(Thread mCurrentThread) {
+//        this.mCurrentThread = mCurrentThread;
+//    }
 }

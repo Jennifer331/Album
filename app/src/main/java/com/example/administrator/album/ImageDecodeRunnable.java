@@ -3,6 +3,7 @@ package com.example.administrator.album;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.widget.ImageView;
 
 /**
@@ -12,7 +13,6 @@ public class ImageDecodeRunnable implements Runnable{
     private ImageTask mImageTask;
 
     interface ImageProcessTaskMethod{
-        void setWorkingThread(Thread thread);
         void handleDone(Thread currentThread,Bitmap bitmap);
     }
 
@@ -26,8 +26,6 @@ public class ImageDecodeRunnable implements Runnable{
 
     @Override
     public void run() {
-        mImageTask.setWorkingThread(Thread.currentThread());
-
         //Moves the current Thread into the background
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
 
@@ -37,6 +35,5 @@ public class ImageDecodeRunnable implements Runnable{
 
         mImageTask.handleDone(Thread.currentThread(),bitmap);
     }
-
 
 }

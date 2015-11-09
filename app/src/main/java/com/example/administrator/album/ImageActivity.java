@@ -11,11 +11,14 @@ public class ImageActivity extends Activity {
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
+    private ImageManager mImageManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mImageManager = ImageManager.getInstance();
+        mImageManager.setContext(this);
 
         mRecyclerView = (RecyclerView)findViewById(R.id.my_recycler_view);
 

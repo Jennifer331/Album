@@ -22,7 +22,7 @@ import java.util.List;
  * Created by Lei Xiaoyue on 2015-11-02.
  */
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
-    private static final String TAG = "ImageAdapter";
+    private static final String TAG = "ImageDecode";
     Context mContext;
     List<String> mData;
     String[] projection = new String[] { MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA, // add
@@ -77,8 +77,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     @Override
     public void onViewRecycled(ViewHolder holder) {
         super.onViewRecycled(holder);
-        Log.v(TAG, "in onViewRecycled");
-//        mImageManager.cancelTask(holder.imageView);
+        Log.v(TAG, "in onViewRecycled " + holder.getPosition());
+        mImageManager.cancelTask(holder);
     }
 
     private void loadData() {
@@ -88,14 +88,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         cur = contentResolver.query(uri, projection, null, null,
                 MediaStore.Images.Media.DATE_ADDED);
-//        if (cur.moveToFirst()) {
-//            while (cur.moveToNext()) {
-//                String data = cur.getString(PROJECTION_DATA);
-//                if (data != null) {
-//                    mData.add(data);
-//                }
-//            }
-//        }
         if (cur != null && cur.moveToLast()) {
             while (cur.moveToPrevious()) {
                 String data = cur.getString(PROJECTION_DATA);
