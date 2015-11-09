@@ -1,16 +1,12 @@
 package com.example.administrator.album;
 
-import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 import android.util.LruCache;
 import android.widget.ImageView;
 
@@ -34,14 +30,12 @@ public class ImageManager {
     private static final int DECODE_DONE = 1;
 
     // the size of memory
-    private static final int DEFAULT_MEM_SIZE = 1024 * 5;// 5MB
+    private static final int DEFAULT_MEM_SIZE = 1024 * 1024 * 5;// 5MB
 
     // Sets the Time Unit to seconds
     private static final TimeUnit KEEP_ALICE_TIME_UNIT;
 
     private static int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
-
-    private static Context mContext;
 
     private final BlockingQueue<Runnable> mDecodeWorkQueue;
 
@@ -89,13 +83,11 @@ public class ImageManager {
                     }
                     case DECODE_DONE: {
                         ImageTask task = (ImageTask) msg.obj;
-                        ImageAdapter.ViewHolder viewHolder = task.getmViewHolder();
-                        if (task.getmPosition() == viewHolder.getPosition()) {
+                        ImageAdapter.ViewHolder viewHolder = task.getViewHolder();
+                        if (task.getPosition() == viewHolder.getLayoutPosition()) {
                             ImageView imageView = viewHolder.imageView;
-                            if (mContext != null && task.hasmBitmap()) {
-                                Drawable drawable = new BitmapDrawable(mContext.getResources(),
-                                        task.getmBitmap());
-                                imageView.setImageDrawable(drawable);
+                            if (task.hasBitmap()) {
+                                imageView.setImageBitmap(task.getBitmap());
                                 imageView.invalidate();
                             }
                         }
@@ -106,22 +98,18 @@ public class ImageManager {
         };
     }
 
-    public static void setContext(Context context) {
-        mContext = context;
-    }
-
     public static void cancelTask(ImageAdapter.ViewHolder viewHolder) {
         if (viewHolder == null || viewHolder.imageView == null) {
             return;
         }
-        int cancelPosition = viewHolder.getPosition();
+        int cancelPosition = viewHolder.getLayoutPosition();
 
         ImageDecodeRunnable[] runnableArray = new ImageDecodeRunnable[mInstance.mDecodeWorkQueue
                 .size()];
         mInstance.mDecodeWorkQueue.toArray(runnableArray);
         synchronized (mInstance) {
             for (ImageDecodeRunnable runnable : runnableArray) {
-                if(runnable.getmImageTask().getmPosition() == cancelPosition) {
+                if (runnable != null && runnable.getImageTask().getPosition() == cancelPosition) {
                     mInstance.mDecodeThreadPool.remove(runnable);
                 }
             }
@@ -137,11 +125,6 @@ public class ImageManager {
                 mInstance.mDecodeThreadPool.remove(runnable);
             }
         }
-    }
-
-    public void setRunningThread(ImageTask task) {
-        Message updateThreadMessage = mHandler.obtainMessage(START_DECODE, task);
-        updateThreadMessage.sendToTarget();
     }
 
     public void loadImage(int position, String imagePath, ImageAdapter.ViewHolder viewHolder) {
@@ -172,16 +155,16 @@ public class ImageManager {
         // add the bitmap to the memory cache
         if (mMemoryCache != null && bitmap != null) {
             synchronized (mMemoryCache) {
-                if (mMemoryCache.get(task.getmImagePath()) == null) {
-                    mMemoryCache.put(task.getmImagePath(), bitmap);
+                if (mMemoryCache.get(task.getImagePath()) == null) {
+                    mMemoryCache.put(task.getImagePath(), bitmap);
                 }
             }
         }
 
         // refresh the view
-        ImageView imageView = task.getmViewHolder().imageView;
+        ImageView imageView = task.getViewHolder().imageView;
         if (bitmap != null && imageView != null) {
-            task.setmBitmap(bitmap);
+            task.setBitmap(bitmap);
             Message comleteMessage = mHandler.obtainMessage(DECODE_DONE, task);
             comleteMessage.sendToTarget();
         }
@@ -202,7 +185,7 @@ public class ImageManager {
             mImageTaskReference = new WeakReference<ImageTask>(task);
         }
 
-        public ImageTask getmImageTaskReference() {
+        public ImageTask getImageTaskReference() {
             return mImageTaskReference.get();
         }
     }

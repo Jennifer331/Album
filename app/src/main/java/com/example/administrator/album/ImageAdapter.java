@@ -25,10 +25,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     private static final String TAG = "ImageDecode";
     Context mContext;
     List<String> mData;
-    String[] projection = new String[] { MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA, // add
-                                                                                                    // DATA
-                                                                                                    // column
-            MediaStore.Images.Media.TITLE, };
+    String[] projection = new String[] { MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA,
+            MediaStore.Images.Media.TITLE };
     private static final int PROJECTION_ID = 0;
     private static final int PROJECTION_DATA = 1;
     private static final int PROJECTION_TITLE = 2;
@@ -55,8 +53,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        Log.v(TAG,"in onBindViewHolder " + position);
-        mImageManager.loadImage(position,mData.get(position),holder);
+        Log.v(TAG, "in onBindViewHolder " + position);
+        mImageManager.loadImage(position, mData.get(position), holder);
     }
 
     @Override
@@ -82,31 +80,37 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     }
 
     private void loadData() {
-        Cursor cur = null;
-        ContentResolver contentResolver = mContext.getContentResolver();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Cursor cur = null;
+                ContentResolver contentResolver = mContext.getContentResolver();
 
-        Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        cur = contentResolver.query(uri, projection, null, null,
-                MediaStore.Images.Media.DATE_ADDED);
-        if (cur != null && cur.moveToLast()) {
-            while (cur.moveToPrevious()) {
-                String data = cur.getString(PROJECTION_DATA);
-                if (data != null) {
-                    mData.add(data);
+                Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                cur = contentResolver.query(uri, projection, null, null,
+                        MediaStore.Images.Media.DATE_ADDED);
+                if (cur != null && cur.moveToLast()) {
+                    while (cur.moveToPrevious()) {
+                        String data = cur.getString(PROJECTION_DATA);
+                        if (data != null) {
+                            mData.add(data);
+                        }
+                    }
+                }
+
+                uri = MediaStore.Images.Media.INTERNAL_CONTENT_URI;
+                cur = contentResolver.query(uri, projection, null, null,
+                        MediaStore.Images.Media.TITLE);
+                if (cur != null && cur.moveToFirst()) {
+                    while (cur.moveToNext()) {
+                        String data = cur.getString(PROJECTION_DATA);
+                        if (data != null) {
+                            mData.add(data);
+                        }
+                    }
                 }
             }
-        }
+        }).run();
 
-        uri = MediaStore.Images.Media.INTERNAL_CONTENT_URI;
-        cur = contentResolver.query(uri, projection, null, null, MediaStore.Images.Media.TITLE);
-        if (cur != null && cur.moveToFirst()) {
-            while (cur.moveToNext()) {
-                String data = cur.getString(PROJECTION_DATA);
-                if (data != null) {
-                    mData.add(data);
-                }
-            }
-        }
     }
-
 }

@@ -18,19 +18,17 @@ public class ImageActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mImageManager = ImageManager.getInstance();
-        mImageManager.setContext(this);
 
-        mRecyclerView = (RecyclerView)findViewById(R.id.my_recycler_view);
+        mRecyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
 
-//        mLayoutManager = new LinearLayoutManager(this);
-        mLayoutManager = new StaggeredGridLayoutManager(4,1);
-//        mLayoutManager = new GridLayoutManager(this,3);
+        // mLayoutManager = new LinearLayoutManager(this);
+        mLayoutManager = new StaggeredGridLayoutManager(4, 1);
+        // mLayoutManager = new GridLayoutManager(this,3);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         mAdapter = new ImageAdapter(this);
         mRecyclerView.setAdapter(mAdapter);
 
     }
-
 
 }
