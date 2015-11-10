@@ -10,9 +10,11 @@ import android.os.Message;
 import android.util.LruCache;
 import android.widget.ImageView;
 
+import com.example.administrator.album.adapter.AlbumAdapter;
 import com.example.administrator.album.adapter.ImageAdapter;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -30,6 +32,7 @@ public class ImageManager {
     // Handler message state
     private static final int START_DECODE = 0;
     private static final int DECODE_DONE = 1;
+    private static final int COMPOSITE_DONE = 2;
 
     // the size of memory
     private static final int DEFAULT_MEM_SIZE = 1024 * 1024 * 5;// 5MB
@@ -95,6 +98,18 @@ public class ImageManager {
                         }
                         break;
                     }
+                    case COMPOSITE_DONE:{
+                        CompositionTask task = (CompositionTask) msg.obj;
+                        AlbumAdapter.ViewHolder viewHolder = task.getViewHolder();
+                        if (task.getPosition() == viewHolder.getLayoutPosition()) {
+                            ImageView imageView = viewHolder.imageView;
+                            if (task.hasBitmap()) {
+                                imageView.setImageBitmap(task.getBitmap());
+                                imageView.invalidate();
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         };
@@ -130,29 +145,42 @@ public class ImageManager {
     }
 
     public void loadImage(int position, String imagePath, ImageAdapter.ViewHolder viewHolder) {
-        ImageView imageview = viewHolder.imageView;
+        ImageView imageView = viewHolder.imageView;
         // find the image in to memory first
         if (mMemoryCache != null) {
             Bitmap bitmap = mMemoryCache.get(imagePath);
             if (bitmap != null) {
-                imageview.setImageBitmap(bitmap);
+                imageView.setImageBitmap(bitmap);
                 return;
             }
         }
 
         // not in memory,start loading
         final ImageTask task = new ImageTask(position, imagePath, viewHolder);
-        Resources resources = imageview.getResources();
+        Resources resources = imageView.getResources();
         AsyncDrawable asyncDrawable = new AsyncDrawable(resources,
                 BitmapFactory.decodeResource(resources, R.drawable.empty_photo), task);
         // set the placeholder of the loading image
-        imageview.setImageDrawable(asyncDrawable);
+        imageView.setImageDrawable(asyncDrawable);
         // add the task to the thread pool for execution
         mInstance.mDecodeThreadPool.execute(new ImageDecodeRunnable(task));
 
     }
 
-    public void handleDone(ImageTask task, Thread currentThread, Bitmap bitmap) {
+    public void compositeImages(int position, List<String> imagePaths,
+            AlbumAdapter.ViewHolder viewHolder) {
+        ImageView imageView = viewHolder.imageView;
+        final CompositionTask task = new CompositionTask(position, imagePaths, viewHolder);
+        Resources resources = imageView.getResources();
+        AsyncDrawable asyncDrawable = new AsyncDrawable(resources,
+                BitmapFactory.decodeResource(resources, R.drawable.empty_photo), task);
+        // set the placeholder of the loading image
+        imageView.setImageDrawable(asyncDrawable);
+        // add the task to the thread pool for execution
+        mInstance.mDecodeThreadPool.execute(new ImageCompositionRunnable(task));
+    }
+
+    public void handleDecodeDone(ImageTask task, Bitmap bitmap) {
 
         // add the bitmap to the memory cache
         if (mMemoryCache != null && bitmap != null) {
@@ -172,6 +200,15 @@ public class ImageManager {
         }
     }
 
+    public void handleCompositionDone(CompositionTask task, Bitmap bitmap) {
+        ImageView imageView = task.getViewHolder().imageView;
+        if (bitmap != null && imageView != null) {
+            task.setBitmap(bitmap);
+            Message comleteMessage = mHandler.obtainMessage(COMPOSITE_DONE, task);
+            comleteMessage.sendToTarget();
+        }
+    }
+
     /**
      * A custom Drawable that will be attached to the imageView while the work
      * is in progress. Contains a reference to the actual worker task, so that
@@ -180,15 +217,15 @@ public class ImageManager {
      * finish order.
      */
     private static class AsyncDrawable extends BitmapDrawable {
-        private final WeakReference<ImageTask> mImageTaskReference;
+        private final WeakReference<RecyclerViewTask> mTaskReference;
 
-        public AsyncDrawable(Resources res, Bitmap bitmap, ImageTask task) {
+        public AsyncDrawable(Resources res, Bitmap bitmap, RecyclerViewTask task) {
             super(res, bitmap);
-            mImageTaskReference = new WeakReference<ImageTask>(task);
+            mTaskReference = new WeakReference<RecyclerViewTask>(task);
         }
 
-        public ImageTask getImageTaskReference() {
-            return mImageTaskReference.get();
+        public RecyclerViewTask getTaskReference() {
+            return mTaskReference.get();
         }
     }
 

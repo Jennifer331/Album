@@ -14,7 +14,7 @@ public class ImageDecodeRunnable implements Runnable {
     public static final int REQUIRED_HEIGHT = 500;
 
     interface ImageDecodeTaskMethod {
-        void decodeHandleDone(Thread currentThread, Bitmap bitmap);
+        void decodeHandleDone(Bitmap bitmap);
     }
 
     public ImageDecodeRunnable(ImageTask imageTask) {
@@ -37,7 +37,7 @@ public class ImageDecodeRunnable implements Runnable {
         Bitmap bitmap = BitmapWorker.decodeBitmapFromFile(mImageTask.getImagePath(), REQUIRED_WIDTH,
                 REQUIRED_HEIGHT);
 
-        mImageTask.decodeHandleDone(Thread.currentThread(), bitmap);
+        mImageTask.decodeHandleDone(bitmap);
     }
 
 }

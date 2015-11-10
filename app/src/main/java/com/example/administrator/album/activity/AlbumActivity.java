@@ -3,9 +3,9 @@ package com.example.administrator.album.activity;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
@@ -28,9 +28,9 @@ public class AlbumActivity extends Activity {
 
         mRecyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
 
-        // mLayoutManager = new LinearLayoutManager(this);
-        mLayoutManager = new StaggeredGridLayoutManager(4, 1);
-        // mLayoutManager = new GridLayoutManager(this,3);
+//        mLayoutManager = new LinearLayoutManager(this);
+//        mLayoutManager = new StaggeredGridLayoutManager(4, 1);
+        mLayoutManager = new GridLayoutManager(this,3);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         mAdapter = new AlbumAdapter(this);

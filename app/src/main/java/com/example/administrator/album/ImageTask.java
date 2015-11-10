@@ -8,13 +8,9 @@ import com.example.administrator.album.ImageDecodeRunnable.ImageDecodeTaskMethod
 /**
  * Created by Lei Xiaoyue on 2015-11-05.
  */
-public class ImageTask implements ImageDecodeTaskMethod {
+public class ImageTask extends RecyclerViewTask implements ImageDecodeTaskMethod {
     private String mImagePath;
-    private int mPosition;
-    private ViewHolder mViewHolder;
     private Bitmap mBitmap;
-
-    private ImageManager mImageManager;
 
     public ImageTask() {
         this(0, null, null);
@@ -28,8 +24,8 @@ public class ImageTask implements ImageDecodeTaskMethod {
     }
 
     @Override
-    public void decodeHandleDone(Thread currentThread, Bitmap bitmap) {
-        mImageManager.handleDone(this, currentThread, bitmap);
+    public void decodeHandleDone( Bitmap bitmap) {
+        mImageManager.handleDecodeDone(this, bitmap);
     }
 
     public String getImagePath() {
@@ -37,7 +33,7 @@ public class ImageTask implements ImageDecodeTaskMethod {
     }
 
     public ViewHolder getViewHolder() {
-        return mViewHolder;
+        return (ViewHolder)mViewHolder;
     }
 
     public boolean hasBitmap() {
@@ -50,9 +46,5 @@ public class ImageTask implements ImageDecodeTaskMethod {
 
     public void setBitmap(Bitmap mBitmap) {
         this.mBitmap = mBitmap;
-    }
-
-    public int getPosition() {
-        return mPosition;
     }
 }

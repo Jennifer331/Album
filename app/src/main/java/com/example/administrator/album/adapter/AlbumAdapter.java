@@ -5,10 +5,8 @@ import android.content.Context;
 
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.v7.widget.CardView;
@@ -24,8 +22,6 @@ import com.example.administrator.album.ImageManager;
 import com.example.administrator.album.R;
 import com.example.administrator.album.model.Album;
 import com.example.administrator.album.util.BitmapWorker;
-
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +62,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         holder.itemView.setTag(mData.get(position).getAlbumId());
         holder.textView.setText(mData.get(position).getAlbumName());
 
-        holder.imageView.setImageDrawable(getAlbumCover(position));
+        mImageManager.compositeImages(position, mData.get(position).getProfileImages(), holder);
+        // holder.imageView.setImageDrawable(getAlbumCover(position));
     }
 
     private Drawable getAlbumCover(int position) {
@@ -74,7 +71,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
             return mContext.getResources().getDrawable(R.drawable.empty_photo, null);
         }
         List<String> profileImagePaths = mData.get(position).getProfileImages();
-        Log.v(TAG,profileImagePaths.size() + "");
+        Log.v(TAG, profileImagePaths.size() + "");
         Bitmap[] bitmaps = new Bitmap[profileImagePaths.size() > COVER_MERGE_PIC_NUM
                 ? COVER_MERGE_PIC_NUM : profileImagePaths.size()];
         for (int i = 0; i < profileImagePaths.size() && i < COVER_MERGE_PIC_NUM; i++) {
@@ -82,8 +79,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
                     COVER_HEIGHT);
         }
 
-        Bitmap cover = BitmapWorker.pileUpBitmaps(bitmaps,COVER_WIDTH,COVER_HEIGHT);
-        return new BitmapDrawable(mContext.getResources(),cover);
+        Bitmap cover = BitmapWorker.pileUpBitmaps(bitmaps, COVER_WIDTH, COVER_HEIGHT);
+        return new BitmapDrawable(mContext.getResources(), cover);
     }
 
     @Override
@@ -150,18 +147,21 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         }).run();
     }
 
+    /**
+      *read 3 or less images from the album to make the cover of the album
+     **/
     private void addAlbumProfile(Album album, ContentResolver contentResolver, Uri uri) {
         String idWhere = MediaStore.Images.Media.BUCKET_ID + "=?";
         Cursor profileCursor = contentResolver.query(uri, Album.PROFILE_PROJECTION, idWhere,
                 new String[] { album.getAlbumId() + "" },
-                MediaStore.Images.Media.DATE_ADDED + " desc limit 4");
+                MediaStore.Images.Media.DATE_ADDED + " desc limit 3");
         if (profileCursor != null && profileCursor.moveToFirst()) {
-            while (profileCursor.moveToNext()) {
+             do{
                 String imagePath = profileCursor.getString(Album.ALBUM_DATA);
                 if (imagePath != null) {
                     album.addProfileImage(imagePath);
                 }
-            }
+            }while (profileCursor.moveToNext());
         }
     }
 }

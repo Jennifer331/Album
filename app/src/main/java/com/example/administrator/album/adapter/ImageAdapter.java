@@ -94,12 +94,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
                 cur = contentResolver.query(uri, projection, where, new String[]{albumId + ""},
                         MediaStore.Images.Media.DATE_ADDED);
                 if (cur != null && cur.moveToLast()) {
-                    while (cur.moveToPrevious()) {
+                    do {
                         String data = cur.getString(PROJECTION_DATA);
                         if (data != null) {
                             mData.add(data);
                         }
-                    }
+                    }while (cur.moveToPrevious());
                 }
 
                 uri = MediaStore.Images.Media.INTERNAL_CONTENT_URI;
