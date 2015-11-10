@@ -1,15 +1,14 @@
 package com.example.administrator.album;
 
 import android.graphics.Bitmap;
-import android.widget.ImageView;
 
-import com.example.administrator.album.ImageAdapter.ViewHolder;
-import com.example.administrator.album.ImageDecodeRunnable.ImageProcessTaskMethod;
+import com.example.administrator.album.adapter.ImageAdapter.ViewHolder;
+import com.example.administrator.album.ImageDecodeRunnable.ImageDecodeTaskMethod;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-05.
  */
-public class ImageTask implements ImageProcessTaskMethod {
+public class ImageTask implements ImageDecodeTaskMethod {
     private String mImagePath;
     private int mPosition;
     private ViewHolder mViewHolder;
@@ -29,7 +28,7 @@ public class ImageTask implements ImageProcessTaskMethod {
     }
 
     @Override
-    public void handleDone(Thread currentThread, Bitmap bitmap) {
+    public void decodeHandleDone(Thread currentThread, Bitmap bitmap) {
         mImageManager.handleDone(this, currentThread, bitmap);
     }
 

@@ -10,6 +10,8 @@ import android.os.Message;
 import android.util.LruCache;
 import android.widget.ImageView;
 
+import com.example.administrator.album.adapter.ImageAdapter;
+
 import java.lang.ref.WeakReference;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
