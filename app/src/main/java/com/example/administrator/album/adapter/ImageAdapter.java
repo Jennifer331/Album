@@ -11,9 +11,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 
 import com.example.administrator.album.ImageManager;
+import com.example.administrator.album.model.Image;
 import com.example.administrator.album.R;
 
 import java.lang.Override;
@@ -24,25 +26,30 @@ import java.util.List;
 /**
  * Created by Lei Xiaoyue on 2015-11-02.
  */
-public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
+public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder>
+        implements View.OnClickListener {
     private static final String TAG = "ImageDecode";
 
     private Context mContext;
-    private List<String> mData;
-    String[] projection = new String[] { MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA,
-            MediaStore.Images.Media.TITLE };
-    private static final int PROJECTION_ID = 0;
-    private static final int PROJECTION_DATA = 1;
-    private static final int PROJECTION_TITLE = 2;
+    private List<Image> mData;
 
     private ImageManager mImageManager;
+    private OnImageItemClickListener mListener;
 
-    public ImageAdapter(Context context,int albumId) {
+    public interface OnImageItemClickListener {
+        void onImageItemClick(View v, Image imageInfo);
+    }
+
+    public ImageAdapter(Context context, int albumId) {
         mContext = context;
-        mData = new ArrayList<String>();
+        mData = new ArrayList<Image>();
         mImageManager = ImageManager.getInstance();
         loadData(albumId);
         // setHasStableIds(true);
+    }
+
+    public void setListener(OnImageItemClickListener mListener) {
+        this.mListener = mListener;
     }
 
     @Override
@@ -51,6 +58,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         View mViewHolder = LayoutInflater.from(parent.getContext()).inflate(R.layout.my_cast_view,
                 parent, false);
         View cardView = mViewHolder.findViewById(R.id.card_view);
+        cardView.setOnClickListener(this);
         ImageAdapter.ViewHolder vh = new ViewHolder((CardView) cardView);
         return vh;
     }
@@ -58,12 +66,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         Log.v(TAG, "in onBindViewHolder " + position);
-        mImageManager.loadImage(position, mData.get(position), holder);
+        holder.itemView.setTag(mData.get(position));
+        mImageManager.loadImage(position, mData.get(position).getImagePath(), holder);
     }
 
     @Override
     public int getItemCount() {
         return mData.size();
+    }
+
+    @Override
+    public void onClick(View v) {
+        mListener.onImageItemClick(v,(Image)v.getTag());
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -79,7 +93,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
     @Override
     public void onViewRecycled(ViewHolder holder) {
         super.onViewRecycled(holder);
-        Log.v(TAG, "in onViewRecycled " + holder.getPosition());
+        Log.v(TAG, "in onViewRecycled " + holder.getLayoutPosition());
         mImageManager.cancelTask(holder);
     }
 
@@ -91,25 +105,27 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
                 ContentResolver contentResolver = mContext.getContentResolver();
                 String where = MediaStore.Images.Media.BUCKET_ID + "=?";
                 Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                cur = contentResolver.query(uri, projection, where, new String[]{albumId + ""},
+                cur = contentResolver.query(uri, Image.PROJECTION, where, new String[] { albumId + "" },
                         MediaStore.Images.Media.DATE_ADDED);
                 if (cur != null && cur.moveToLast()) {
                     do {
-                        String data = cur.getString(PROJECTION_DATA);
+                        String data = cur.getString(Image.PROJECTION_DATA);
+                        int albumId = cur.getInt(Image.PROJECTION_BUCKET_ID);
                         if (data != null) {
-                            mData.add(data);
+                            mData.add(new Image(data,albumId));
                         }
-                    }while (cur.moveToPrevious());
+                    } while (cur.moveToPrevious());
                 }
 
                 uri = MediaStore.Images.Media.INTERNAL_CONTENT_URI;
-                cur = contentResolver.query(uri, projection, null, null,
+                cur = contentResolver.query(uri, Image.PROJECTION, null, null,
                         MediaStore.Images.Media.TITLE);
                 if (cur != null && cur.moveToFirst()) {
                     while (cur.moveToNext()) {
-                        String data = cur.getString(PROJECTION_DATA);
+                        String data = cur.getString(Image.PROJECTION_DATA);
+                        int albumId = cur.getInt(Image.PROJECTION_BUCKET_ID);
                         if (data != null) {
-                            mData.add(data);
+                            mData.add(new Image(data,albumId));
                         }
                     }
                 }

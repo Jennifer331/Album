@@ -40,10 +40,10 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
     private List<Album> mData;
     private ImageManager mImageManager;
     private ContentResolver mContentResolver;
-    private OnRecycledViewItemClickListener mListener;
+    private OnAlbumItemClickListener mListener;
 
-    public interface OnRecycledViewItemClickListener {
-        void onItemClick(View v, int tag);
+    public interface OnAlbumItemClickListener {
+        void onAlbumItemClick(View v, int tag);
     }
 
     public AlbumAdapter(Context context) {
@@ -53,7 +53,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         loadData();
     }
 
-    public void setOnRecycledViewItemClickListener(OnRecycledViewItemClickListener listener) {
+    public void setOnRecycledViewItemClickListener(OnAlbumItemClickListener listener) {
         this.mListener = listener;
     }
 
@@ -101,7 +101,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
     @Override
     public void onClick(View v) {
         if (mListener != null) {
-            mListener.onItemClick(v, (int) v.getTag());
+            mListener.onAlbumItemClick(v, (int) v.getTag());
         }
     }
 

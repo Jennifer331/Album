@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.view.View;
 import android.widget.Toast;
 
@@ -34,9 +33,9 @@ public class AlbumActivity extends Activity {
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         mAdapter = new AlbumAdapter(this);
-        mAdapter.setOnRecycledViewItemClickListener(new AlbumAdapter.OnRecycledViewItemClickListener(){
+        mAdapter.setOnRecycledViewItemClickListener(new AlbumAdapter.OnAlbumItemClickListener(){
             @Override
-            public void onItemClick(View v,int tag) {
+            public void onAlbumItemClick(View v, int tag) {
                 Toast.makeText(AlbumActivity.this,String.valueOf(tag),Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(AlbumActivity.this,ImageActivity.class);
                 intent.putExtra(Album.ALBUM_ID + "",tag);
