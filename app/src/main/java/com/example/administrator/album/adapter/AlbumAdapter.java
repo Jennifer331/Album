@@ -36,6 +36,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
     private static final int COVER_WIDTH = 500;
     private static final int COVER_HEIGHT = 500;
 
+    private static final Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+
     private Context mContext;
     private List<Album> mData;
     private ImageManager mImageManager;
@@ -50,6 +52,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         mContext = context;
         mData = new ArrayList<Album>();
         mImageManager = ImageManager.getInstance();
+        mContentResolver = mContext.getContentResolver();
         loadData();
     }
 
@@ -120,35 +123,41 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Cursor albumCursor = null;
-                mContentResolver = mContext.getContentResolver();
+                Cursor albumCursor = getAlbumCursor();
+                try {
+                    if (albumCursor != null && albumCursor.moveToLast()) {
+                        while (albumCursor.moveToPrevious()) {
+                            int albumId = albumCursor.getInt(Album.ALBUM_ID);
+                            String albumName = albumCursor.getString(Album.ALBUM_NAME);
+                            Album album = null;
+                            if (albumId != 0 && albumName != null) {
+                                album = new Album(albumId, albumName);
+                            }
 
-                Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-                String where = "0==0) GROUP BY (" + MediaStore.Images.Media.BUCKET_ID;
-                albumCursor = mContentResolver.query(uri, Album.PROJECTION, where, null,
-                        MediaStore.Images.Media.DATE_ADDED);
-                if (albumCursor != null && albumCursor.moveToLast()) {
-                    while (albumCursor.moveToPrevious()) {
-                        int albumId = albumCursor.getInt(Album.ALBUM_ID);
-                        String albumName = albumCursor.getString(Album.ALBUM_NAME);
-                        Album album = null;
-                        if (albumId != 0 && albumName != null) {
-                            album = new Album(albumId, albumName);
-                        }
+                            addAlbumProfile(album, mContentResolver, uri);
 
-                        addAlbumProfile(album, mContentResolver, uri);
-
-                        if (album != null) {
-                            mData.add(album);
+                            if (album != null) {
+                                mData.add(album);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    albumCursor.close();
                 }
             }
         }).run();
     }
 
+    private Cursor getAlbumCursor() {
+        String where = "0==0) GROUP BY (" + MediaStore.Images.Media.BUCKET_ID;
+        return mContentResolver.query(uri, Album.PROJECTION, where, null,
+                MediaStore.Images.Media.DATE_ADDED);
+    }
+
     /**
-      *read 3 or less images from the album to make the cover of the album
+     * read 3 or less images from the album to make the cover of the album
      **/
     private void addAlbumProfile(Album album, ContentResolver contentResolver, Uri uri) {
         String idWhere = MediaStore.Images.Media.BUCKET_ID + "=?";
@@ -156,12 +165,12 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
                 new String[] { album.getAlbumId() + "" },
                 MediaStore.Images.Media.DATE_ADDED + " desc limit 3");
         if (profileCursor != null && profileCursor.moveToFirst()) {
-             do{
+            do {
                 String imagePath = profileCursor.getString(Album.ALBUM_DATA);
                 if (imagePath != null) {
                     album.addProfileImage(imagePath);
                 }
-            }while (profileCursor.moveToNext());
+            } while (profileCursor.moveToNext());
         }
     }
 }

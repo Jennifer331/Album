@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.Log;
+import android.view.ViewGroup;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-10.
