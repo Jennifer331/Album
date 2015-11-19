@@ -5,9 +5,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.LruCache;
-import android.view.View;
 
-import com.example.administrator.album.ui.AlbumView;
+import com.example.administrator.album.ui.LHView;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -17,16 +16,19 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by Lei Xiaoyue on 2015-11-16.
  */
-public class BitmapLoader implements BitmapDecodeRunnable.Callback {
+public class BitmapLoader implements ThumbDecodeRunnable.Callback, FullSizeDecodeRunnable.Callback {
     private static final int DEFAULT_MEM_SIZE = 1024 * 1024 * 100;// 100MB
     private static final int KEEP_ALIVE_TIME = 1;
     private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
+    private static final int THUMB_DECODE_DONE = 0;
+    private static final int FULL_SIZE_DECODE_DONE = 1;
 
     private static final TimeUnit KEEP_ALICE_TIME_UNIT;
 
     private final BlockingQueue<Runnable> mDecodeWorkQueue;
     private final ThreadPoolExecutor mDecodeThreadPool;
-    private LruCache<String, Bitmap> mMemoryCache;
+    private LruCache<String, Bitmap> mThumbCache;
+    private LruCache<String, Bitmap> mFullSizeCache;
 
     private static BitmapLoader mInstance = null;
 
@@ -45,7 +47,13 @@ public class BitmapLoader implements BitmapDecodeRunnable.Callback {
         mDecodeWorkQueue = new LinkedBlockingQueue<Runnable>();
         mDecodeThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, NUMBER_OF_CORES,
                 KEEP_ALIVE_TIME, KEEP_ALICE_TIME_UNIT, mDecodeWorkQueue);
-        mMemoryCache = new LruCache<String, Bitmap>(DEFAULT_MEM_SIZE) {
+        mThumbCache = new LruCache<String, Bitmap>(DEFAULT_MEM_SIZE) {
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount();
+            }
+        };
+        mFullSizeCache = new LruCache<String, Bitmap>(DEFAULT_MEM_SIZE) {
             @Override
             protected int sizeOf(String key, Bitmap value) {
                 return value.getByteCount();
@@ -54,58 +62,105 @@ public class BitmapLoader implements BitmapDecodeRunnable.Callback {
         mHandler = new Handler(Looper.getMainLooper()) {
             @Override
             public void handleMessage(Message msg) {
-                switch(msg.what){
-                    case 0:
-                        BitmapAndView info = (BitmapAndView)msg.obj;
+                switch (msg.what) {
+                    case THUMB_DECODE_DONE: {
+                        BitmapAndView info = (BitmapAndView) msg.obj;
                         info.getView().invalidate();
                         break;
+                    }
+                    case FULL_SIZE_DECODE_DONE: {
+                        BitmapAndView info = (BitmapAndView) msg.obj;
+                        info.getView().invalidate();
+                        break;
+                    }
                 }
             }
         };
     }
 
-    public Bitmap getThumb(AlbumView view,String path, int thumbWidth, int thumbHeight) {
-        //find in memory first
-        Bitmap bitmap = mMemoryCache.get(path);
+    public Bitmap getThumb(LHView view, String path, int thumbWidth, int thumbHeight) {
+        // find in memory first
+        Bitmap bitmap = mThumbCache.get(path);
         if (null != bitmap)
             return bitmap;
 
-        //then check if the task already existed
-        BitmapDecodeRunnable[] runnableArray = new BitmapDecodeRunnable[mInstance.mDecodeWorkQueue.size()];
+        // then check if the task already existed
+        LHImageDecodeRunnable[] runnableArray = new LHImageDecodeRunnable[mInstance.mDecodeWorkQueue
+                .size()];
         mInstance.mDecodeWorkQueue.toArray(runnableArray);
-        for(BitmapDecodeRunnable runnable:runnableArray){
-            if(runnable.getPath().equals(path))
+        for (LHImageDecodeRunnable runnable : runnableArray) {
+            if (null != runnable && runnable.getPath().equals(path)
+                    && thumbWidth == runnable.getWidth() && thumbHeight == runnable.getHeight())
                 return null;
         }
 
-        //to load
+        // to load
         mInstance.mDecodeThreadPool
-                .execute(new BitmapDecodeRunnable(view,this, path, thumbWidth, thumbHeight));
+                .execute(new ThumbDecodeRunnable(view, this, path, thumbWidth, thumbHeight));
+        return null;
+    }
+
+    public Bitmap getFullSizeBitmap(LHView view, String path, int width, int height) {
+        // find in memory first
+        Bitmap bitmap = mFullSizeCache.get(path);
+        if (null != bitmap)
+            return bitmap;
+
+        // then check if the task already existed
+        LHImageDecodeRunnable[] runnableArray = new LHImageDecodeRunnable[mInstance.mDecodeWorkQueue
+                .size()];
+        mInstance.mDecodeWorkQueue.toArray(runnableArray);
+        for (LHImageDecodeRunnable runnable : runnableArray) {
+            if (runnable.getPath().equals(path) && width == runnable.getWidth()
+                    && height == runnable.getHeight())
+                return null;
+        }
+
+        // to load
+        mInstance.mDecodeThreadPool
+                .execute(new FullSizeDecodeRunnable(view, this, path, width, height));
         return null;
     }
 
     @Override
-    public void handleDecodeDone(AlbumView view,String path, Bitmap bitmap) {
-        if (null != mMemoryCache && null != bitmap) {
-            synchronized (mMemoryCache) {
-                if (null == mMemoryCache.get(path)) {
-                    mMemoryCache.put(path, bitmap);
+    public void handleThumbDecodeDone(LHView view, String path, Bitmap bitmap) {
+        if (null != mThumbCache && null != bitmap) {
+            synchronized (mThumbCache) {
+                if (null == mThumbCache.get(path)) {
+                    mThumbCache.put(path, bitmap);
                 }
             }
         }
 
         if (null != bitmap) {
-            BitmapAndView obj = new BitmapAndView(bitmap,view);
-            Message completeMessage = mHandler.obtainMessage(0,obj);
+            BitmapAndView obj = new BitmapAndView(null, view);
+            Message completeMessage = mHandler.obtainMessage(THUMB_DECODE_DONE, obj);
             completeMessage.sendToTarget();
         }
     }
 
-    public class BitmapAndView{
-        private Bitmap bitmap;
-        private AlbumView view;
+    @Override
+    public void handleFullSizeDecodeDone(LHView view, String path, Bitmap bitmap) {
+        if (null != mFullSizeCache && null != bitmap) {
+            synchronized (mFullSizeCache) {
+                if (null == mFullSizeCache.get(path)) {
+                    mFullSizeCache.put(path, bitmap);
+                }
+            }
+        }
 
-        public BitmapAndView(Bitmap bitmap,AlbumView view){
+        if (null != bitmap) {
+            BitmapAndView obj = new BitmapAndView(null, view);
+            Message completeMessage = mHandler.obtainMessage(FULL_SIZE_DECODE_DONE, obj);
+            completeMessage.sendToTarget();
+        }
+    }
+
+    public class BitmapAndView {
+        private Bitmap bitmap;
+        private LHView view;
+
+        public BitmapAndView(Bitmap bitmap, LHView view) {
             this.bitmap = bitmap;
             this.view = view;
         }
@@ -118,11 +173,11 @@ public class BitmapLoader implements BitmapDecodeRunnable.Callback {
             this.bitmap = bitmap;
         }
 
-        public AlbumView getView() {
+        public LHView getView() {
             return view;
         }
 
-        public void setView(AlbumView view) {
+        public void setView(LHView view) {
             this.view = view;
         }
     }

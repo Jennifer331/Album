@@ -1,12 +1,8 @@
 package com.example.administrator.album;
 
 import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.util.Log;
 
-import com.example.administrator.album.util.BitmapWorker;
-
-import java.util.List;
+import com.example.administrator.album.util.BitmapUtil;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-05.
@@ -39,11 +35,11 @@ public class ImageCompositionRunnable implements Runnable {
         int size = mCompositionTask.getImagePaths().size();
         Bitmap[] bitmaps = new Bitmap[size > COVER_MERGE_PIC_NUM ? COVER_MERGE_PIC_NUM : size];
         for (int i = 0; i < size && i < COVER_MERGE_PIC_NUM; i++) {
-            bitmaps[i] = BitmapWorker.decodeBitmapFromFile(mCompositionTask.getImagePaths().get(i),
+            bitmaps[i] = BitmapUtil.decodeBitmapFromFile(mCompositionTask.getImagePaths().get(i),
                     COVER_WIDTH, COVER_HEIGHT);
         }
 
-        Bitmap cover = BitmapWorker.pileUpBitmaps(bitmaps, COVER_WIDTH, COVER_HEIGHT);
+        Bitmap cover = BitmapUtil.pileUpBitmaps(bitmaps, COVER_WIDTH, COVER_HEIGHT);
         mCompositionTask.handleCompositionDone(cover);
     }
 

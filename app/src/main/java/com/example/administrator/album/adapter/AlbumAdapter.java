@@ -21,7 +21,7 @@ import android.widget.TextView;
 import com.example.administrator.album.ImageManager;
 import com.example.administrator.album.R;
 import com.example.administrator.album.model.Album;
-import com.example.administrator.album.util.BitmapWorker;
+import com.example.administrator.album.util.BitmapUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,11 +78,11 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewHolder>
         Bitmap[] bitmaps = new Bitmap[profileImagePaths.size() > COVER_MERGE_PIC_NUM
                 ? COVER_MERGE_PIC_NUM : profileImagePaths.size()];
         for (int i = 0; i < profileImagePaths.size() && i < COVER_MERGE_PIC_NUM; i++) {
-            bitmaps[i] = BitmapWorker.decodeBitmapFromFile(profileImagePaths.get(i), COVER_WIDTH,
+            bitmaps[i] = BitmapUtil.decodeBitmapFromFile(profileImagePaths.get(i), COVER_WIDTH,
                     COVER_HEIGHT);
         }
 
-        Bitmap cover = BitmapWorker.pileUpBitmaps(bitmaps, COVER_WIDTH, COVER_HEIGHT);
+        Bitmap cover = BitmapUtil.pileUpBitmaps(bitmaps, COVER_WIDTH, COVER_HEIGHT);
         return new BitmapDrawable(mContext.getResources(), cover);
     }
 
