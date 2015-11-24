@@ -6,8 +6,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.util.Log;
 import android.view.ViewGroup;
+
+import com.example.administrator.album.ui.ImageArea;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-10.
@@ -26,7 +29,8 @@ public class BitmapUtil {
         return BitmapFactory.decodeFile(pathName, options);
     }
 
-    public static Bitmap decodeBitmapFromResource(Resources resources,int id, int reqWidth, int reqHeight) {
+    public static Bitmap decodeBitmapFromResource(Resources resources, int id, int reqWidth,
+            int reqHeight) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeResource(resources, id, options);
@@ -37,7 +41,7 @@ public class BitmapUtil {
         return BitmapFactory.decodeResource(resources, id, options);
     }
 
-    private static Bitmap decodeWithFillRatio(Bitmap bitmap,int destWidh,int destHeight){
+    private static Bitmap decodeWithFillRatio(Bitmap bitmap, int destWidh, int destHeight) {
         float suggestedScale = 1f;
         float alignTranslateX = 0f;
         float alignTranslateY = 0f;
@@ -67,7 +71,39 @@ public class BitmapUtil {
         return resultBitmap;
     }
 
-    private static Bitmap decodeWithFullRatio(Bitmap bitmap,int destWidth,int destHeight){
+    private static ImageArea decodeWithFillRatioReturnImageArea(Bitmap bitmap, int destWidth,
+            int destHeight) {
+        float suggestedScale = 1f;
+        float alignTranslateX = 0f;
+        float alignTranslateY = 0f;
+        float bitmapRatio = (float) bitmap.getWidth() / (float) bitmap.getHeight();
+        float destinationRatio = (float) destWidth / (float) destHeight;
+        if (bitmapRatio < destinationRatio) {
+            suggestedScale = (float) destWidth / (float) bitmap.getWidth();
+            alignTranslateX = 0f;
+            alignTranslateY = (bitmap.getHeight() * suggestedScale - destHeight) / 2;
+            if (alignTranslateY < 0) {
+                alignTranslateY = 0;
+            }
+        } else {
+            suggestedScale = (float) destHeight / (float) bitmap.getHeight();
+            alignTranslateX = (bitmap.getWidth() * suggestedScale - destWidth) / 2;
+            alignTranslateY = 0f;
+            if (alignTranslateX < 0) {
+                alignTranslateX = 0;
+            }
+        }
+
+        Bitmap result = Bitmap.createScaledBitmap(bitmap, (int) (bitmap.getWidth() * suggestedScale),
+                (int) (bitmap.getHeight() * suggestedScale), false);
+        bitmap.recycle();
+        Rect src = new Rect((int) (0 + alignTranslateX), (int) (0 + alignTranslateY),
+                (int) (destWidth + alignTranslateX), (int) (destHeight + alignTranslateY));
+        Log.v(TAG,src.toString());
+        return new ImageArea(result, src);
+    }
+
+    private static Bitmap decodeWithFullRatio(Bitmap bitmap, int destWidth, int destHeight) {
         float suggestedScale = 1f;
         float alignTranslateX = 0f;
         float alignTranslateY = 0f;
@@ -97,24 +133,65 @@ public class BitmapUtil {
         return resultBitmap;
     }
 
-    public static Bitmap decodeWithFillRatioFromFile(String path,int destWidth,int destHeight){
-        Bitmap bitmap = decodeBitmapFromFile(path,destWidth,destHeight);
-        return decodeWithFillRatio(bitmap,destWidth,destHeight);
+    private static ImageArea decodeWithFullRatioReturnImageArea(Bitmap bitmap, int destWidth, int destHeight) {
+        float suggestedScale = 1f;
+        float alignTranslateX = 0f;
+        float alignTranslateY = 0f;
+        float bitmapRatio = (float) bitmap.getWidth() / (float) bitmap.getHeight();
+        float destinationRatio = (float) destWidth / (float) destHeight;
+        if (bitmapRatio > destinationRatio) {
+            suggestedScale = (float) destWidth / (float) bitmap.getWidth();
+            alignTranslateX = 0f;
+            alignTranslateY = -(bitmap.getHeight() * suggestedScale - destHeight) / 2;
+            if (alignTranslateY < 0) {
+                alignTranslateY = 0;
+            }
+        } else {
+            suggestedScale = (float) destHeight / (float) bitmap.getHeight();
+            alignTranslateX = -(bitmap.getWidth() * suggestedScale - destWidth) / 2;
+            alignTranslateY = 0f;
+            if (alignTranslateX < 0) {
+                alignTranslateX = 0;
+            }
+        }
+        Bitmap result = Bitmap.createScaledBitmap(bitmap, (int) (bitmap.getWidth() * suggestedScale),
+                (int) (bitmap.getHeight() * suggestedScale), false);
+        Rect src = new Rect((int) (0 - alignTranslateX), (int) (0 - alignTranslateY),
+                (int) (destWidth - alignTranslateX), (int) (destHeight - alignTranslateY));
+
+        return new ImageArea(result, src);
     }
 
-    public static Bitmap decodeWithFullRatioFromFile(String path,int destWidth,int destHeight){
-        Bitmap bitmap = decodeBitmapFromFile(path,destWidth,destHeight);
-        return decodeWithFullRatio(bitmap,destWidth,destHeight);
+    public static Bitmap decodeWithFillRatioFromFile(String path, int destWidth, int destHeight) {
+        Bitmap bitmap = decodeBitmapFromFile(path, destWidth, destHeight);
+        return decodeWithFillRatio(bitmap, destWidth, destHeight);
     }
 
-    public static Bitmap decodeWithFillRatioFromResource(Resources resources,int id,int destWidh,int destHeight){
-        Bitmap bitmap = decodeBitmapFromResource(resources,id,destWidh,destHeight);
-        return decodeWithFillRatio(bitmap,destWidh,destHeight);
+    public static ImageArea decodeWithFillRatioFromFileReturnImageArea(String path, int destWidth, int destHeight) {
+        Bitmap bitmap = decodeBitmapFromFile(path, destWidth * 2, destHeight * 2);
+        return decodeWithFillRatioReturnImageArea(bitmap, destWidth, destHeight);
     }
 
-    public static Bitmap decodeWithFullRatioFromResource(Resources resources,int id,int destWidh,int destHeight){
-        Bitmap bitmap = decodeBitmapFromResource(resources,id,destWidh,destHeight);
-        return decodeWithFullRatio(bitmap,destWidh,destHeight);
+    public static Bitmap decodeWithFullRatioFromFile(String path, int destWidth, int destHeight) {
+        Bitmap bitmap = decodeBitmapFromFile(path, destWidth, destHeight);
+        return decodeWithFullRatio(bitmap, destWidth, destHeight);
+    }
+
+    public static ImageArea decodeWithFullRatioFromFileReturnImageArea(String path, int destWidth, int destHeight) {
+        Bitmap bitmap = decodeBitmapFromFile(path, destWidth, destHeight);
+        return decodeWithFullRatioReturnImageArea(bitmap, destWidth, destHeight);
+    }
+
+    public static Bitmap decodeWithFillRatioFromResource(Resources resources, int id, int destWidh,
+            int destHeight) {
+        Bitmap bitmap = decodeBitmapFromResource(resources, id, destWidh, destHeight);
+        return decodeWithFillRatio(bitmap, destWidh, destHeight);
+    }
+
+    public static Bitmap decodeWithFullRatioFromResource(Resources resources, int id, int destWidh,
+            int destHeight) {
+        Bitmap bitmap = decodeBitmapFromResource(resources, id, destWidh, destHeight);
+        return decodeWithFullRatio(bitmap, destWidh, destHeight);
     }
 
     public static int calculateInSampleSize(BitmapFactory.Options options, int reqWidth,

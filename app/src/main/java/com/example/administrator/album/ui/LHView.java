@@ -1,27 +1,25 @@
 package com.example.administrator.album.ui;
 
-import android.animation.AnimatorSet;
+import android.animation.ValueAnimator;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.util.LruCache;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.OverScroller;
 import android.widget.Toast;
 
 import com.example.administrator.album.BitmapLoader;
-import com.example.administrator.album.R;
+import com.example.administrator.album.MyAnimator;
 import com.example.administrator.album.model.Image;
 
 import java.util.ArrayList;
@@ -37,7 +35,7 @@ public class LHView extends View {
     private final static int COLUMN_MARGIN = 5;
     private final static int ANCHOR = 0;
     private final static int DEFAULT_TEST_ALBUM_ID = -17_3977_3001;
-    private final static int DEFAULT_TEST_DECODE_LIMIT = 1000;
+    public static final int FLING_VELOCITY_DOWNSCALE = 3;
 
     private int mDisplayMode = ALBUM;
     private final static int SINGLE_IMAGE = 2;
@@ -48,17 +46,21 @@ public class LHView extends View {
     private int thumbWidth;
     private int thumbHeight;
 
-    private float lastPointY = 0;
+    private Rect mEndDestBound = new Rect();
 
     private Rect mDisplayBound;
 
     private MyImageAdapter mAdapter;
 
-    private LruCache<Integer, ImageDrawable> memCache;
-
     private List<ImageArea> mChildren;
 
     private GestureDetectorCompat mDetector;
+
+    private Bitmap snapshot;
+
+    // private Scroller mScroller;
+    private OverScroller mScroller;
+    private ValueAnimator mScrollAnimator;
 
     public LHView(Context context) {
         this(context, null);
@@ -74,16 +76,47 @@ public class LHView extends View {
 
     public LHView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+        init(context);
+    }
+
+    private void init(Context context) {
         mDisplayBound = new Rect(0, 0, 0, 0);
-        mChildren = new ArrayList<ImageArea>();
+        mChildren = new ArrayList<>();
         mAdapter = new MyImageAdapter(context, DEFAULT_TEST_ALBUM_ID);
-
         mDetector = new GestureDetectorCompat(context, new MyGestureListener());
+        // mScroller = new Scroller(context, null, true);
+        mScroller = new OverScroller(context);
+        mScrollAnimator = ValueAnimator.ofFloat(0, 1);
+        mScrollAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                tickScrollAnimation();
+            }
+        });
+        setDrawingCacheEnabled(true);
+    }
 
+    private void tickScrollAnimation() {
+        int mLastPosition;
+        if (!mScroller.isFinished()) {
+            mLastPosition = mScroller.getCurrY();
+            mScroller.computeScrollOffset();
+            adjustDisplayingBound(mLastPosition - mScroller.getCurrY());
+        } else {
+            mScrollAnimator.cancel();
+        }
+    }
+
+    private void adjustDisplayingBound(int deltaY) {
+        mDisplayBound.top += deltaY;
+        mDisplayBound.bottom += deltaY;
+        checkBoundLimit();
+        invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
+        boolean hasMoreFrame = false;
         switch (mDisplayMode) {
             case ALBUMSET: {
                 break;
@@ -120,30 +153,56 @@ public class LHView extends View {
                     float x = (i % COLUMN) * thumbWidth + (i % COLUMN - 1) * COLUMN_MARGIN;
                     float y = (i / COLUMN) * (thumbHeight + LINE_MARGIN) + LINE_MARGIN
                             - mDisplayBound.top;
-                    Bitmap bitmap = mAdapter.getBitmap(this, i, thumbWidth, thumbHeight);
-                    mChildren.add(new ImageArea(i, x, y, bitmap));
+                    ImageArea item = mAdapter.getImageArea(this, i, thumbWidth, thumbHeight);
+                    if (null != item) {
+                        item.setPosition(i);
+                        Rect dest = new Rect((int) x, (int) y, (int) (x + thumbWidth),
+                                (int) (y + thumbHeight));
+                        item.setDestBound(dest);
+                        mChildren.add(item);
+                    }
                 }
 
                 canvas.save();
                 for (ImageArea child : mChildren) {
                     if (null != child) {
-                        child.draw(canvas);
+                        hasMoreFrame |= child.draw(canvas, false);
                     }
                 }
                 canvas.restore();
                 break;
             }
             case SINGLE_IMAGE: {
-                Bitmap bitmap = mAdapter.getFullSizeBitmap(this, mChildren.get(0).getPosition(),
-                        getWidth(), getHeight());
-                if (null != bitmap) {
-                    canvas.drawBitmap(bitmap, 0f, 0f, null);
+                if (!mChildren.isEmpty()) {
+                    ImageArea item = mChildren.get(0);
+                    ImageArea newItem = mAdapter.getFullSizeImageArea(this, item.getPosition(),
+                            getWidth(), getHeight());
+                    // put the
+                    if (null != newItem) {
+                        item.setSrc(newItem.getSrc());
+                        mEndDestBound.left = 0;
+                        mEndDestBound.top = 0;
+                        mEndDestBound.right = getWidth();
+                        mEndDestBound.bottom = getHeight();
+                    }
+                    if (null != item) {
+                        item.getAnimator().setEndSrcBound(mEndDestBound);
+                        hasMoreFrame |= item.draw(canvas, true);
+                    }
                 }
-                canvas.drawText("i love you", 50f, 50f, new Paint());
                 break;
             }
         }
+        if (hasMoreFrame) {
+            invalidate();
+        }
     }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         return this.mDetector.onTouchEvent(event);
@@ -156,7 +215,7 @@ public class LHView extends View {
         private BitmapLoader loader;
 
         public MyImageAdapter(Context context, int albumId) {
-            mData = new ArrayList<Image>();
+            mData = new ArrayList<>();
             mContext = context;
             mAlbumId = albumId;
             loader = BitmapLoader.getInstance();
@@ -167,12 +226,12 @@ public class LHView extends View {
             return mData.size();
         }
 
-        public Bitmap getBitmap(LHView view, int position, int width, int height) {
+        public ImageArea getImageArea(LHView view, int position, int width, int height) {
             return loader.getThumb(view, mData.get(position).getImagePath(), width, height);
         }
 
-        public Bitmap getFullSizeBitmap(LHView view, int position, int width, int height) {
-            return loader.getFullSizeBitmap(view, mData.get(position).getImagePath(), width,
+        public ImageArea getFullSizeImageArea(LHView view, int position, int width, int height) {
+            return loader.getFullSizeImageArea(view, mData.get(position).getImagePath(), width,
                     height);
         }
 
@@ -180,7 +239,7 @@ public class LHView extends View {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    Cursor cur = null;
+                    Cursor cur;
                     ContentResolver contentResolver = mContext.getContentResolver();
                     String where = MediaStore.Images.Media.BUCKET_ID + "=?";
                     Uri uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
@@ -194,6 +253,7 @@ public class LHView extends View {
                                 mData.add(new Image(data, albumId));
                             }
                         } while (cur.moveToPrevious());
+                        cur.close();
                     }
                 }
             }).run();
@@ -202,8 +262,19 @@ public class LHView extends View {
 
     @Override
     public void computeScroll() {
-        // Toast.makeText(this.getContext(),"compiteScroll",Toast.LENGTH_SHORT).show();
         super.computeScroll();
+        Log.v(TAG, "in computeScroll");
+        if (null != mScroller) {
+            int oldy = mScroller.getCurrY();
+            if (mScroller.computeScrollOffset()) {
+                scroll(oldy - mScroller.getCurrY());
+            }
+        }
+    }
+
+    @Override
+    protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+        super.onScrollChanged(l, t, oldl, oldt);
     }
 
     public class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
@@ -219,9 +290,12 @@ public class LHView extends View {
                     break;
                 }
                 case ALBUM: {
+                    buildDrawingCache();
+                    snapshot = getDrawingCache();
                     int position = (int) (((mDisplayBound.top + event.getY())
                             / (thumbHeight + LINE_MARGIN))) * COLUMN
-                            + (int) (event.getX() / (thumbWidth + COLUMN_MARGIN)) + 1;
+                            + (int) (event.getX() / (thumbWidth + COLUMN_MARGIN));
+                    Toast.makeText(getContext(), position + "clicked", Toast.LENGTH_SHORT).show();
                     ImageArea mTarget = null;
                     for (ImageArea child : mChildren) {
                         if (position == child.getPosition()) {
@@ -234,15 +308,29 @@ public class LHView extends View {
                     }
                     mDisplayMode = SINGLE_IMAGE;
                     mChildren.clear();
-                    Bitmap bitmap = mAdapter.getFullSizeBitmap(LHView.this, position, getWidth(),
-                            getHeight());
-                    // Bitmap bitmap = mAdapter.getBitmap(LHView.this, position,
-                    // getWidth(),
-                    // getHeight());
-                    mTarget.setX(0f);
-                    mTarget.setY(0f);
-                    mTarget.setSrc(bitmap);
-                    mChildren.add(mTarget);
+                    ImageArea item = mAdapter.getFullSizeImageArea(LHView.this, position,
+                            getWidth(), getHeight());
+                    MyAnimator animator;
+                    if (null != item) {
+                        animator = new MyAnimator(new Rect(0, 0, getWidth(), getHeight()),
+                                item.getSrcBound(), snapshot);
+                        item.setPosition(position);
+                        // Rect dest = new Rect(0, 0, getWidth(), getHeight());
+                        item.setDestBound(mTarget.getDestBound());
+                        item.setPortion(mTarget.getDisplayXPortion(), mTarget.getDisplayYPortion());
+                        item.setAnimator(animator);
+                    } else {
+                        animator = new MyAnimator(new Rect(0, 0, getWidth(), getHeight()),
+                                mTarget.getSrcBound(), snapshot);
+                        item = new ImageArea(mTarget);
+                        item.setAnimator(animator);
+                        animator.init(item);
+                        Log.v(TAG,
+                                "getWidth:" + getWidth() + " getHeight:" + getHeight()
+                                        + " mTarget.getWidth:" + mTarget.getWidth()
+                                        + " mTarget.getHeight:" + mTarget.getHeight());
+                    }
+                    mChildren.add(item);
                     invalidate();
                     break;
                 }
@@ -258,15 +346,31 @@ public class LHView extends View {
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            mDisplayBound.top += distanceY;
-            mDisplayBound.bottom += distanceY;
-            checkLimit();
+            scroll(distanceY);
+            return true;
+        }
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            mScroller.forceFinished(true);
+            mScroller.fling(mScroller.getCurrX(), mScroller.getCurrY(), 0,
+                    (int) velocityY / FLING_VELOCITY_DOWNSCALE, 0, 0, Integer.MIN_VALUE,
+                    Integer.MAX_VALUE, 10, 10);
+            // mScrollAnimator.setDuration(mScroller.getDuration());
+            // mScrollAnimator.start();
             invalidate();
             return true;
         }
     }
 
-    private void checkLimit() {
+    private void scroll(float distanceY) {
+        mDisplayBound.top += distanceY;
+        mDisplayBound.bottom += distanceY;
+        checkBoundLimit();
+        invalidate();
+    }
+
+    private void checkBoundLimit() {
         if (ANCHOR > mDisplayBound.top) {
             int delta = mDisplayBound.top - ANCHOR;
             mDisplayBound.top -= delta;

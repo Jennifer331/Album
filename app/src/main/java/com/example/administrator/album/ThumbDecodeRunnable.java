@@ -2,6 +2,7 @@ package com.example.administrator.album;
 
 import android.graphics.Bitmap;
 
+import com.example.administrator.album.ui.ImageArea;
 import com.example.administrator.album.ui.LHView;
 import com.example.administrator.album.util.BitmapUtil;
 
@@ -12,7 +13,7 @@ public class ThumbDecodeRunnable extends LHImageDecodeRunnable {
     private final Callback callback;
 
     public static interface Callback {
-        public void handleThumbDecodeDone(LHView view, String path, Bitmap bitmap);
+        public void handleThumbDecodeDone(LHView view, String path, ImageArea item);
     }
 
     @Override
@@ -44,6 +45,6 @@ public class ThumbDecodeRunnable extends LHImageDecodeRunnable {
         // Moves the current Thread into the background
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
         callback.handleThumbDecodeDone(view, path,
-                BitmapUtil.decodeWithFillRatioFromFile(path, width, height));
+                BitmapUtil.decodeWithFillRatioFromFileReturnImageArea(path, width, height));
     }
 }
