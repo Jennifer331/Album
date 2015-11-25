@@ -7,8 +7,8 @@ import android.os.Message;
 import android.util.Log;
 import android.util.LruCache;
 
-import com.example.administrator.album.ui.ImageArea;
-import com.example.administrator.album.ui.LHView;
+import com.example.administrator.album.view.ImageArea;
+import com.example.administrator.album.view.LHView;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

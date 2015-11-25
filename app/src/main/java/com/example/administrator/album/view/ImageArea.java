@@ -1,13 +1,18 @@
-package com.example.administrator.album.ui;
+package com.example.administrator.album.view;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.os.Parcelable;
 import android.util.Log;
 
-import com.example.administrator.album.MyAnimator;
+import com.example.administrator.album.animator.AlphaAnimator;
+import com.example.administrator.album.animator.LHAnimator;
+import com.example.administrator.album.animator.ScaleAnimator;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ServiceConfigurationError;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-17.
@@ -18,8 +23,9 @@ public class ImageArea {
     private Bitmap mSrc;
     private Rect mSrcBound;
     private Rect mDestBound;
-    private MyAnimator mAnimator;
-    private Paint mBgPaint;
+    private List<LHAnimator> mAnimators;
+    private Paint mPaint;
+    private boolean mFullSizeFlag = false;
 
     // the following two fields have a strong relationship with mSrcBound,change
     // anyone,the other should be changed!
@@ -36,15 +42,16 @@ public class ImageArea {
 
     public ImageArea(ImageArea item) {
         this(item.getPosition(), item.getSrc(), item.getSrcBound(), item.getDestBound(),
-                item.getAnimator());
+                item.getAnimators());
     }
 
-    public ImageArea(int position, Bitmap src, Rect srcBound, Rect destBound, MyAnimator animator) {
+    public ImageArea(int position, Bitmap src, Rect srcBound, Rect destBound,
+            List<LHAnimator> animators) {
         mPosition = position;
         if (null != src) {
             mSrc = src;
         }
-        Log.v(TAG,null == srcBound?"null rect" :srcBound.toString());
+        Log.v(TAG, null == srcBound ? "null rect" : srcBound.toString());
         if (null != srcBound) {
             mSrcBound = new Rect(srcBound);
             refreshPortion();
@@ -52,38 +59,39 @@ public class ImageArea {
         if (null != destBound) {
             mDestBound = new Rect(destBound);
         }
-        if (null != animator) {
-            mAnimator = animator;
+        if (null != animators) {
+            mAnimators = animators;
+        } else {
+            mAnimators = new ArrayList<LHAnimator>();
         }
         init();
     }
 
     private void init() {
-        mBgPaint = new Paint();
+        mPaint = new Paint();
     }
 
-    public boolean draw(Canvas canvas, boolean full) {
-        if (full) {
-            adjustDestBound();
-        }
+    public boolean draw(Canvas canvas) {
+        // if (full) {
+        // adjustDestBound();
+        // }
+        boolean hasMoreFrame = false;
         if (null != mSrc) {
-            {
-                canvas.save();
-                if (null != mAnimator) {
-                    mBgPaint.setAlpha(mAnimator.getBgAlpha());
-                    canvas.drawBitmap(mAnimator.getBackground(), 0, 0, mBgPaint);
+            if (null != mAnimators && !mAnimators.isEmpty()) {
+                for (LHAnimator animator : mAnimators) {
+                    if (null != animator) {
+                        hasMoreFrame |= animator.hasNextFrame(this);
+                    }
                 }
-                canvas.drawBitmap(mSrc, mSrcBound, mDestBound, null);
-                canvas.restore();
             }
-            if (null != mAnimator) {
-                while (mAnimator.hasNextFrame(this)) {
-                    return true;
-                }
-                mAnimator = null;
-            }
+            canvas.save();
+            canvas.drawBitmap(mSrc, mSrcBound, mDestBound, mPaint);
+            canvas.restore();
         }
-        return false;
+        if(!hasMoreFrame){
+            mAnimators.clear();
+        }
+        return hasMoreFrame;
     }
 
     // when a srcBound is set,the displayXPortion and displayYPortion should be
@@ -110,24 +118,6 @@ public class ImageArea {
         }
     }
 
-    private void adjustDestBound() {
-        if (null != mSrc && null != mDestBound) {
-            float realRatio = (float) mDestBound.width() / (float) mDestBound.height();
-            float targetRatio = (float) mSrc.getWidth() / (float) mSrc.getHeight();
-            if (realRatio > targetRatio) {
-                int width = (int) (targetRatio * mDestBound.height());
-                int offsetX = (mDestBound.width() - width) / 2;
-                mDestBound.left += offsetX;
-                mDestBound.right -= offsetX;
-            } else {
-                int height = (int) (mDestBound.width() / targetRatio);
-                int offsetY = (mDestBound.height() - height) / 2;
-                mDestBound.top += offsetY;
-                mDestBound.bottom -= offsetY;
-            }
-        }
-    }
-
     public void setPortion(float xPortion, float yPortion) {
         this.displayXPortion = xPortion;
         this.displayYPortion = yPortion;
@@ -151,12 +141,47 @@ public class ImageArea {
                 + (null == mSrc ? "is " : "is not") + " null";
     }
 
-    public MyAnimator getAnimator() {
-        return mAnimator;
+    public boolean isFullSize(){
+        return mFullSizeFlag;
     }
 
-    public void setAnimator(MyAnimator Animator) {
-        this.mAnimator = Animator;
+    public void setFullSizeFlag(boolean flag){
+        this.mFullSizeFlag = flag;
+    }
+
+    public float getSrcRatio() {
+        return mSrc.getWidth() / mSrc.getHeight();
+    }
+
+    public int getAlpha() {
+        return mPaint.getAlpha();
+    }
+
+    public void setAlpha(int alpha) {
+        mPaint.setAlpha(alpha);
+    }
+
+    public List<LHAnimator> getAnimators() {
+        return mAnimators;
+    }
+
+    public ScaleAnimator getScaleAnimator(){
+        ScaleAnimator result = null;
+        if(null != mAnimators && !mAnimators.isEmpty()){
+            for(LHAnimator animator:mAnimators){
+                if(null != animator && animator instanceof ScaleAnimator){
+                    result = (ScaleAnimator)animator;
+                }
+            }
+        }
+        return result;
+    }
+
+    public void addAnimator(LHAnimator animator) {
+        if (null == mAnimators) {
+            mAnimators = new ArrayList<LHAnimator>();
+        }
+        mAnimators.add(animator);
     }
 
     public int getPosition() {
@@ -182,6 +207,10 @@ public class ImageArea {
     public void setSrc(Bitmap src) {
         this.mSrc = src;
         refreshSrcBound();
+    }
+
+    public boolean hasSrc() {
+        return null == mSrc ? false : true;
     }
 
     public Rect getSrcBound() {

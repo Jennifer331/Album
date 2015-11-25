@@ -1,33 +1,30 @@
-package com.example.administrator.album;
+package com.example.administrator.album.animator;
 
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.util.Log;
 
-import com.example.administrator.album.ui.ImageArea;
+import com.example.administrator.album.view.ImageArea;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-18.
  */
-public class MyAnimator {
-    private final static String TAG = "MyAnimator";
+public class ScaleAnimator extends LHAnimator{
+    private final static String TAG = "ScaleAnimator";
     private final static float DEFAULT_FACTOR = 1E-1F;
     private final static float SRC_FACTOR = 1E-1F;
     private final static float ERROR = 3E-1F;
 
-    private Bitmap mBackground;
     private int mBeginBgAlpha = 255;
-    private int mEndBgAlpha = 0;
     private Rect mBeginSrcBound;
     private Rect mEndSrcBound;
     private Rect mBeginDestBound;
     private Rect mEndDestBound;
 
     private static int i = 0;
-    public MyAnimator(Rect endDestBound, Rect endSrcBound,Bitmap bg) {
+    public ScaleAnimator(Rect endDestBound, Rect endSrcBound) {
         mEndDestBound = endDestBound;
         mEndSrcBound = endSrcBound;
-        mBackground = bg;
     }
 
     public void init(ImageArea item){
@@ -52,14 +49,11 @@ public class MyAnimator {
         copyRect(rect,mEndDestBound);
     }
 
-    public Bitmap getBackground() {
-        return mBackground;
-    }
-
     public int getBgAlpha() {
         return mBeginBgAlpha;
     }
 
+    @Override
     public boolean hasNextFrame(ImageArea object){
         Log.v(TAG,++i + "");
         boolean result = false;
@@ -70,8 +64,7 @@ public class MyAnimator {
                 || Math.abs(object.getSrcBound().left - mEndSrcBound.left) > ERROR
                 || Math.abs(object.getSrcBound().right - mEndSrcBound.right) > ERROR
                 || Math.abs(object.getSrcBound().top - mEndSrcBound.top) > ERROR
-                || Math.abs(object.getSrcBound().bottom - mEndSrcBound.bottom) > ERROR
-                || Math.abs(mBeginBgAlpha - mEndBgAlpha) > ERROR){
+                || Math.abs(object.getSrcBound().bottom - mEndSrcBound.bottom) > ERROR){
             result = true;
             Rect destBound = object.getDestBound();
             if(null != destBound && null != mEndDestBound) {
@@ -89,7 +82,6 @@ public class MyAnimator {
                 int bottom = (int) (srcBound.bottom + (mEndSrcBound.bottom - srcBound.bottom) * SRC_FACTOR);
                 object.setSrcBound(new Rect(left, top, right, bottom));
             }
-            mBeginBgAlpha = (int)(mBeginBgAlpha + (mEndBgAlpha - mBeginBgAlpha) * DEFAULT_FACTOR);
         }
         return result;
     }

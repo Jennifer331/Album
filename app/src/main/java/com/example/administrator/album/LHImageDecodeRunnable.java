@@ -1,10 +1,6 @@
 package com.example.administrator.album;
 
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-
-import com.example.administrator.album.ui.LHView;
-import com.example.administrator.album.util.BitmapUtil;
+import com.example.administrator.album.view.LHView;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-05.

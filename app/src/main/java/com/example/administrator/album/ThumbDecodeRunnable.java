@@ -1,9 +1,7 @@
 package com.example.administrator.album;
 
-import android.graphics.Bitmap;
-
-import com.example.administrator.album.ui.ImageArea;
-import com.example.administrator.album.ui.LHView;
+import com.example.administrator.album.view.ImageArea;
+import com.example.administrator.album.view.LHView;
 import com.example.administrator.album.util.BitmapUtil;
 
 /**

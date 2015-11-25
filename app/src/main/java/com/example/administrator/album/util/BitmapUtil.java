@@ -1,6 +1,5 @@
 package com.example.administrator.album.util;
 
-import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -8,9 +7,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.Log;
-import android.view.ViewGroup;
 
-import com.example.administrator.album.ui.ImageArea;
+import com.example.administrator.album.view.ImageArea;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-10.
