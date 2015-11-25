@@ -2,6 +2,7 @@ package com.example.administrator.album.activity;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.FrameLayout;
@@ -41,13 +42,15 @@ public class TestActivity extends Activity implements AlbumPage.Callback, ImageP
 
     @Override
     public void headToImage(ImageArea item) {
-//        mAlbumPage.saveState();
+        // mAlbumPage.saveState();
         if (null == mImagePage) {
-            mImagePage = new ImagePage(TestActivity.this, item, this);
+            mImagePage = new ImagePage(TestActivity.this, this, item);
             mLayout.addView(mImagePage, mPageParams);
-        }else{
-//            mImagePage.show(item);
+        }else {
+            mImagePage.setVisibility(View.VISIBLE);
+            mImagePage.show(item);
         }
+
     }
 
     @Override
@@ -55,8 +58,9 @@ public class TestActivity extends Activity implements AlbumPage.Callback, ImageP
         if (null == mAlbumPage) {
             mAlbumPage = new AlbumPage(this, this);
             mLayout.addView(mAlbumPage, mPageParams);
-        }else{
-//            mAlbumPage.show();
+        } else {
+            // mAlbumPage.show();
+            mAlbumPage.setVisibility(View.VISIBLE);
         }
     }
 }

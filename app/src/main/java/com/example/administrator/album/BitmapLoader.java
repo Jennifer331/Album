@@ -7,7 +7,9 @@ import android.os.Message;
 import android.util.Log;
 import android.util.LruCache;
 
+import com.example.administrator.album.view.AlbumPage;
 import com.example.administrator.album.view.ImageArea;
+import com.example.administrator.album.view.ImagePage;
 import com.example.administrator.album.view.LHView;
 
 import java.util.concurrent.BlockingQueue;
@@ -70,11 +72,13 @@ public class BitmapLoader implements ThumbDecodeRunnable.Callback, FullSizeDecod
                 switch (msg.what) {
                     case THUMB_DECODE_DONE: {
                         BitmapAndView info = (BitmapAndView) msg.obj;
+                        ((AlbumPage)info.getView()).refreshDisplayingItem();
                         info.getView().invalidate();
                         break;
                     }
                     case FULL_SIZE_DECODE_DONE: {
                         BitmapAndView info = (BitmapAndView) msg.obj;
+                        ((ImagePage)info.getView()).refreshDisplayingItem();
                         info.getView().invalidate();
                         break;
                     }
@@ -163,20 +167,20 @@ public class BitmapLoader implements ThumbDecodeRunnable.Callback, FullSizeDecod
     }
 
     public class BitmapAndView {
-        private Bitmap bitmap;
+        private ImageArea item;
         private LHView view;
 
-        public BitmapAndView(Bitmap bitmap, LHView view) {
-            this.bitmap = bitmap;
+        public BitmapAndView(ImageArea item, LHView view) {
+            this.item = item;
             this.view = view;
         }
 
-        public Bitmap getBitmap() {
-            return bitmap;
+        public ImageArea getItem() {
+            return item;
         }
 
-        public void setBitmap(Bitmap bitmap) {
-            this.bitmap = bitmap;
+        public void setItem(ImageArea bitmap) {
+            this.item = bitmap;
         }
 
         public LHView getView() {

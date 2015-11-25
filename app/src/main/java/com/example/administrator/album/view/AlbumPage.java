@@ -25,8 +25,6 @@ public class AlbumPage extends LHView {
     private final static int ANCHOR = 0;
     private final static int DEFAULT_TEST_ALBUM_ID = -17_3977_3001;
     private static final int FLING_VELOCITY_DOWNSCALE = 3;
-    private static final int FADE_OUT_BEGIN_ALPHA = 255;
-    private static final int FADE_OUT_END_ALPHA = 0;
 
     private int endLine = ANCHOR;
     private int thumbWidth;
@@ -58,6 +56,11 @@ public class AlbumPage extends LHView {
         setDrawingCacheEnabled(true);
     }
 
+    public void show() {
+        refreshDisplayingItem();
+        fadein();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         if (mScroller.computeScrollOffset()) {
@@ -71,36 +74,9 @@ public class AlbumPage extends LHView {
             thumbHeight = thumbWidth;
             endLine = (mAdapter.getCount() / COLUMN) * (thumbHeight + LINE_MARGIN) + thumbHeight;
             endLine = endLine < mDisplayBound.height() ? mDisplayBound.height() : endLine;
+            refreshDisplayingItem();
         }
-        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (thumbHeight + LINE_MARGIN))
-                + COLUMN;
-        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (thumbHeight + LINE_MARGIN));
-        if (0 != (mDisplayBound.top - ANCHOR) % (thumbHeight + LINE_MARGIN)) {
-            pastThumbAmount -= 4;
-            singlePageThumbAmount += 8;
-        }
-        if (pastThumbAmount < 0) {
-            pastThumbAmount = 0;
-        }
-        if (mAdapter.getCount() < pastThumbAmount + singlePageThumbAmount) {
-            // TODO
-        }
-        if (singlePageThumbAmount <= 0)
-            return;
-        mChildren.clear();
-        for (int i = pastThumbAmount; mAdapter.getCount() > i
-                && i < pastThumbAmount + singlePageThumbAmount; i++) {
-            float x = (i % COLUMN) * thumbWidth + (i % COLUMN - 1) * COLUMN_MARGIN;
-            float y = (i / COLUMN) * (thumbHeight + LINE_MARGIN) + LINE_MARGIN - mDisplayBound.top;
-            ImageArea item = mAdapter.getImageArea(this, i, thumbWidth, thumbHeight);
-            if (null != item) {
-                item.setPosition(i);
-                Rect dest = new Rect((int) x, (int) y, (int) (x + thumbWidth),
-                        (int) (y + thumbHeight));
-                item.setDestBound(dest);
-                mChildren.add(item);
-            }
-        }
+
         super.onDraw(canvas);
     }
 
@@ -146,20 +122,10 @@ public class AlbumPage extends LHView {
             if (null == mTarget) {
                 return true;
             }
+//            fadeout();
+            AlbumPage.this.setVisibility(GONE);
             mCallback.headToImage(mTarget);
-            fadeout();
             return true;
-        }
-
-        private void fadeout() {
-            AlphaAnimator animator = new AlphaAnimator(FADE_OUT_BEGIN_ALPHA, FADE_OUT_END_ALPHA);
-            if(null != mChildren && !mChildren.isEmpty()){
-                for(ImageArea item : mChildren){
-                    if(null != item){
-                        item.addAnimator(animator);
-                    }
-                }
-            }
         }
 
         @Override
@@ -184,7 +150,41 @@ public class AlbumPage extends LHView {
         mDisplayBound.top += distanceY;
         mDisplayBound.bottom += distanceY;
         checkBoundLimit();
+        refreshDisplayingItem();
         invalidate();
+    }
+
+    @Override
+    public void refreshDisplayingItem() {
+        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (thumbHeight + LINE_MARGIN))
+                + COLUMN;
+        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (thumbHeight + LINE_MARGIN));
+        if (0 != (mDisplayBound.top - ANCHOR) % (thumbHeight + LINE_MARGIN)) {
+            pastThumbAmount -= 4;
+            singlePageThumbAmount += 8;
+        }
+        if (pastThumbAmount < 0) {
+            pastThumbAmount = 0;
+        }
+        if (mAdapter.getCount() < pastThumbAmount + singlePageThumbAmount) {
+            // TODO
+        }
+        if (singlePageThumbAmount <= 0)
+            return;
+        mChildren.clear();
+        for (int i = pastThumbAmount; mAdapter.getCount() > i
+                && i < pastThumbAmount + singlePageThumbAmount; i++) {
+            float x = (i % COLUMN) * thumbWidth + (i % COLUMN - 1) * COLUMN_MARGIN;
+            float y = (i / COLUMN) * (thumbHeight + LINE_MARGIN) + LINE_MARGIN - mDisplayBound.top;
+            ImageArea item = mAdapter.getImageArea(this, i, thumbWidth, thumbHeight);
+            if (null != item) {
+                item.setPosition(i);
+                Rect dest = new Rect((int) x, (int) y, (int) (x + thumbWidth),
+                        (int) (y + thumbHeight));
+                item.setDestBound(dest);
+                mChildren.add(item);
+            }
+        }
     }
 
     @Override

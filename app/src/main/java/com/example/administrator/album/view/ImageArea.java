@@ -72,9 +72,6 @@ public class ImageArea {
     }
 
     public boolean draw(Canvas canvas) {
-        // if (full) {
-        // adjustDestBound();
-        // }
         boolean hasMoreFrame = false;
         if (null != mSrc) {
             if (null != mAnimators && !mAnimators.isEmpty()) {
@@ -134,6 +131,17 @@ public class ImageArea {
         }
     }
 
+    public boolean hasScaleAnimator(){
+        if(null != mAnimators && !mAnimators.isEmpty()){
+            for(LHAnimator animator:mAnimators){
+                if(null != animator && animator instanceof ScaleAnimator){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     @Override
     public String toString() {
         return "mPosition:" + mPosition + " X:" + mDestBound.left + " Y:" + mDestBound.top
@@ -151,6 +159,10 @@ public class ImageArea {
 
     public float getSrcRatio() {
         return mSrc.getWidth() / mSrc.getHeight();
+    }
+
+    public Rect getSrcSize(){
+        return new Rect(0,0,mSrc.getWidth(),mSrc.getHeight());
     }
 
     public int getAlpha() {
@@ -180,6 +192,13 @@ public class ImageArea {
     public void addAnimator(LHAnimator animator) {
         if (null == mAnimators) {
             mAnimators = new ArrayList<LHAnimator>();
+        }
+        if(!mAnimators.isEmpty()){
+            for(int i = 0;i < mAnimators.size();i++){
+                LHAnimator item = mAnimators.get(i);
+                if(item.getClass().equals(animator.getClass()))
+                    mAnimators.remove(item);
+            }
         }
         mAnimators.add(animator);
     }
@@ -217,8 +236,15 @@ public class ImageArea {
         return mSrcBound;
     }
 
-    public void setSrcBound(Rect mSrcBound) {
-        this.mSrcBound = mSrcBound;
+    public void setSrcBound(Rect srcBound) {
+        if(null == srcBound){
+            this.mSrcBound = new Rect(srcBound);
+        }else {
+            this.mSrcBound.left = srcBound.left;
+            this.mSrcBound.top = srcBound.top;
+            this.mSrcBound.right = srcBound.right;
+            this.mSrcBound.bottom = srcBound.bottom;
+        }
         refreshPortion();
     }
 
@@ -226,8 +252,15 @@ public class ImageArea {
         return mDestBound;
     }
 
-    public void setDestBound(Rect mDestBound) {
-        this.mDestBound = mDestBound;
+    public void setDestBound(Rect destBound) {
+        if(null == this.mDestBound){
+            this.mDestBound = new Rect(destBound);
+        }else {
+            this.mDestBound.left = destBound.left;
+            this.mDestBound.top = destBound.top;
+            this.mDestBound.right = destBound.right;
+            this.mDestBound.bottom = destBound.bottom;
+        }
     }
 
     public float getDisplayXPortion() {

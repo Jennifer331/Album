@@ -1,5 +1,7 @@
 package com.example.administrator.album.animator;
 
+import android.util.Log;
+
 import com.example.administrator.album.view.ImageArea;
 
 /**
@@ -7,14 +9,11 @@ import com.example.administrator.album.view.ImageArea;
  */
 public class AlphaAnimator extends LHAnimator{
     private final static String TAG = "AlphaAnimator";
-    private final static float DEFAULT_FACTOR = 1E-1F;
-    private final static float ERROR = 3E-1F;
 
-    private int mBeginAlpha = 255;
     private int mEndAlpha = 0;
 
-    public AlphaAnimator(int start,int end) {
-        mBeginAlpha = start;
+    private static int counter = 0;
+    public AlphaAnimator(int end) {
         mEndAlpha = end;
     }
 
@@ -26,28 +25,22 @@ public class AlphaAnimator extends LHAnimator{
         this.mEndAlpha = mEndAlpha;
     }
 
-    public int getBeginAlpha() {
-        return mBeginAlpha;
-    }
-
-    public void setBeginAlpha(int mBeginAlpha) {
-        this.mBeginAlpha = mBeginAlpha;
-    }
-
     @Override
     public boolean hasNextFrame(ImageArea object){
-        boolean result = false;
+        Log.v(TAG,++counter + " object alpha:"+ object.getAlpha() + " endAlpha" + mEndAlpha);
+        boolean hasNextFrame = false;
         int alpha = object.getAlpha();
-        if( Math.abs(alpha - mEndAlpha) > ERROR){
-            result = true;
-            object.setAlpha((int)(alpha + (mEndAlpha - alpha) * DEFAULT_FACTOR));
+        if(alpha == mEndAlpha) {
+            return hasNextFrame;
+        }else if(alpha < mEndAlpha){
+            hasNextFrame = true;
+            alpha += 3;
+            object.setAlpha(alpha);
+        }else{
+            hasNextFrame = true;
+            alpha -= 3;
+            object.setAlpha(alpha);
         }
-        return result;
-    }
-
-    public void revert(){
-        int temp = mBeginAlpha;
-        mBeginAlpha = mEndAlpha;
-        mEndAlpha = temp;
+        return hasNextFrame;
     }
 }

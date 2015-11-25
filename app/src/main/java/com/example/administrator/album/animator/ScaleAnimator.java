@@ -1,6 +1,5 @@
 package com.example.administrator.album.animator;
 
-import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.util.Log;
 
@@ -21,7 +20,7 @@ public class ScaleAnimator extends LHAnimator{
     private Rect mBeginDestBound;
     private Rect mEndDestBound;
 
-    private static int i = 0;
+    private static int counter = 0;
     public ScaleAnimator(Rect endDestBound, Rect endSrcBound) {
         mEndDestBound = endDestBound;
         mEndSrcBound = endSrcBound;
@@ -45,7 +44,7 @@ public class ScaleAnimator extends LHAnimator{
         copyRect(rect,mEndSrcBound);
     }
 
-    public void setmEndDestBound(Rect rect){
+    public void setEndDestBound(Rect rect){
         copyRect(rect,mEndDestBound);
     }
 
@@ -55,12 +54,13 @@ public class ScaleAnimator extends LHAnimator{
 
     @Override
     public boolean hasNextFrame(ImageArea object){
-        Log.v(TAG,++i + "");
+        Log.v(TAG,++counter + "");
         boolean result = false;
         if( Math.abs(object.getDestBound().left - mEndDestBound.left) > ERROR
                 || Math.abs(object.getDestBound().right - mEndDestBound.right) > ERROR
                 || Math.abs(object.getDestBound().top - mEndDestBound.top) > ERROR
                 || Math.abs(object.getDestBound().bottom - mEndDestBound.bottom) > ERROR
+
                 || Math.abs(object.getSrcBound().left - mEndSrcBound.left) > ERROR
                 || Math.abs(object.getSrcBound().right - mEndSrcBound.right) > ERROR
                 || Math.abs(object.getSrcBound().top - mEndSrcBound.top) > ERROR
