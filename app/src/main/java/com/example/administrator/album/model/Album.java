@@ -1,9 +1,9 @@
 package com.example.administrator.album.model;
 
-import android.provider.MediaStore;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import android.provider.MediaStore;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-10.
@@ -31,7 +31,7 @@ public class Album {
 
     }
 
-    public Album(int albumId,String albumName){
+    public Album(int albumId, String albumName){
         this.albumId = albumId;
         this.albumName = albumName;
         profileImages = new ArrayList<String>();

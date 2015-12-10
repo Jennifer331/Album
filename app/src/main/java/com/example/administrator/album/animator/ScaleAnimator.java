@@ -4,95 +4,70 @@ import android.graphics.Rect;
 import android.util.Log;
 
 import com.example.administrator.album.view.ImageArea;
+import com.example.administrator.album.view.LHItem;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-18.
  */
-public class ScaleAnimator extends LHAnimator{
+public class ScaleAnimator extends LHAnimator {
     private final static String TAG = "ScaleAnimator";
-    private final static float DEFAULT_FACTOR = 1E-1F;
-    private final static float SRC_FACTOR = 1E-1F;
-    private final static float ERROR = 3E-1F;
 
-    private int mBeginBgAlpha = 255;
-    private Rect mBeginSrcBound;
-    private Rect mEndSrcBound;
-    private Rect mBeginDestBound;
-    private Rect mEndDestBound;
+    private LHRectAnimator mSrcBoundAnimator;
+    private LHRectAnimator mDestBoundAnimator;
 
-    private static int counter = 0;
-    public ScaleAnimator(Rect endDestBound, Rect endSrcBound) {
-        mEndDestBound = endDestBound;
-        mEndSrcBound = endSrcBound;
+    private Callback mCallback;
+
+    public interface Callback {
+        void animationFinished();
     }
 
-    public void init(ImageArea item){
-        mBeginSrcBound = new Rect(item.getSrcBound());
-        mBeginDestBound = new Rect(item.getDestBound());
+    public ScaleAnimator(final Rect curSrcBound, final Rect endSrcBound, final Rect curDestBound,
+                         final Rect endDestBound) {
+        this(curSrcBound,endSrcBound,curDestBound,endDestBound,null);
     }
 
-    public void copyRect(Rect from,Rect to){
-        if(null != from && null != to){
-            to.left = from.left;
-            to.right = from.right;
-            to.top = from.top;
-            to.bottom = from.bottom;
-        }
+    public ScaleAnimator(final Rect curSrcBound, final Rect endSrcBound, final Rect curDestBound,
+                         final Rect endDestBound, final Callback callback) {
+        mSrcBoundAnimator = new LHRectAnimator(curSrcBound,endSrcBound);
+        mDestBoundAnimator = new LHRectAnimator(curDestBound,endDestBound);
+        mCallback = callback;
     }
 
-    public void setEndSrcBound(Rect rect){
-        copyRect(rect,mEndSrcBound);
+    public void setEndSrcBound(Rect rect) {
+        mSrcBoundAnimator.setDestRect(rect);
     }
 
-    public void setEndDestBound(Rect rect){
-        copyRect(rect,mEndDestBound);
+    public void setCurSrcBound(Rect rect){
+        mSrcBoundAnimator.setCurrentRect(rect);
     }
 
-    public int getBgAlpha() {
-        return mBeginBgAlpha;
+    public void setEndDestBound(Rect rect) {
+        mDestBoundAnimator.setDestRect(rect);
     }
 
     @Override
-    public boolean hasNextFrame(ImageArea object){
-        Log.v(TAG,++counter + "");
-        boolean result = false;
-        if( Math.abs(object.getDestBound().left - mEndDestBound.left) > ERROR
-                || Math.abs(object.getDestBound().right - mEndDestBound.right) > ERROR
-                || Math.abs(object.getDestBound().top - mEndDestBound.top) > ERROR
-                || Math.abs(object.getDestBound().bottom - mEndDestBound.bottom) > ERROR
-
-                || Math.abs(object.getSrcBound().left - mEndSrcBound.left) > ERROR
-                || Math.abs(object.getSrcBound().right - mEndSrcBound.right) > ERROR
-                || Math.abs(object.getSrcBound().top - mEndSrcBound.top) > ERROR
-                || Math.abs(object.getSrcBound().bottom - mEndSrcBound.bottom) > ERROR){
-            result = true;
-            Rect destBound = object.getDestBound();
-            if(null != destBound && null != mEndDestBound) {
-                int left = (int) (destBound.left + (mEndDestBound.left - destBound.left) * SRC_FACTOR);
-                int right = (int) (destBound.right + (mEndDestBound.right - destBound.right) * SRC_FACTOR);
-                int top = (int) (destBound.top + (mEndDestBound.top - destBound.top) * SRC_FACTOR);
-                int bottom = (int) (destBound.bottom + (mEndDestBound.bottom - destBound.bottom) * SRC_FACTOR);
-                object.setDestBound(new Rect(left, top, right, bottom));
-            }
-            Rect srcBound = object.getSrcBound();
-            if(null != srcBound && null != mEndSrcBound) {
-                int left = (int) (srcBound.left + (mEndSrcBound.left - srcBound.left) * SRC_FACTOR);
-                int right = (int) (srcBound.right + (mEndSrcBound.right - srcBound.right) * SRC_FACTOR);
-                int top = (int) (srcBound.top + (mEndSrcBound.top - srcBound.top) * SRC_FACTOR);
-                int bottom = (int) (srcBound.bottom + (mEndSrcBound.bottom - srcBound.bottom) * SRC_FACTOR);
-                object.setSrcBound(new Rect(left, top, right, bottom));
-            }
+    public boolean hasNextFrame(LHItem object) {
+        boolean hasNextFrame = false;
+        hasNextFrame |= mSrcBoundAnimator.compute();
+        hasNextFrame |= mDestBoundAnimator.compute();
+        if(!mSrcBoundAnimator.isInvalid()) {
+            ((ImageArea) object).setSrcBound(mSrcBoundAnimator.getCurrentRect());
         }
-        return result;
+        Log.v(TAG, mDestBoundAnimator.getCurrentRect() + "");
+        if(!mDestBoundAnimator.isInvalid()) {
+            ((ImageArea) object).setDestBound(mDestBoundAnimator.getCurrentRect());
+        }
+        if(!hasNextFrame && null != mCallback){
+            mCallback.animationFinished();
+        }
+        return hasNextFrame;
     }
 
-    public void revert(){
-        Rect temp = mEndDestBound;
-        mEndDestBound = mBeginDestBound;
-        mBeginDestBound = temp;
+    public Rect getCurSrcBound(){
+        return mSrcBoundAnimator.getCurrentRect();
+    }
 
-        temp = mEndSrcBound;
-        mEndSrcBound = mBeginSrcBound;
-        mBeginSrcBound = temp;
+    public Rect getCurDestBound(){
+        return mDestBoundAnimator.getCurrentRect();
     }
 }

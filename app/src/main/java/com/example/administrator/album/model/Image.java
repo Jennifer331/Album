@@ -23,7 +23,7 @@ public class Image {
 
     }
 
-    public Image(String imagePath,int albumId){
+    public Image(String imagePath, int albumId){
         mImagePath = imagePath;
         mAlbumId = albumId;
     }

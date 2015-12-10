@@ -16,13 +16,20 @@ import com.example.administrator.album.view.ImageArea;
 public class BitmapUtil {
     private static final String TAG = "BitmapUtil";
 
+    private static void recycleBitmap(Bitmap bitmap){
+        if(null != bitmap && !bitmap.isRecycled()){
+            bitmap.recycle();
+            bitmap = null;
+        }
+    }
+
     public static Bitmap decodeBitmapFromFile(String pathName, int reqWidth, int reqHeight) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeFile(pathName, options);
 
         options.inJustDecodeBounds = false;
-        options.inSampleSize = calculateInSampleSize2(options, reqWidth, reqHeight);
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         Log.v(TAG, "Decode Sample" + options.inSampleSize + "");
         return BitmapFactory.decodeFile(pathName, options);
     }
@@ -34,7 +41,7 @@ public class BitmapUtil {
         BitmapFactory.decodeResource(resources, id, options);
 
         options.inJustDecodeBounds = false;
-        options.inSampleSize = calculateInSampleSize2(options, reqWidth, reqHeight);
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         Log.v(TAG, "Decode Sample" + options.inSampleSize + "");
         return BitmapFactory.decodeResource(resources, id, options);
     }
@@ -66,6 +73,7 @@ public class BitmapUtil {
         thumbCanvas.translate(alignTranslateX, alignTranslateY);
         thumbCanvas.drawBitmap(bitmap, 0, 0, null);
 
+        recycleBitmap(bitmap);
         return resultBitmap;
     }
 
@@ -94,10 +102,11 @@ public class BitmapUtil {
 
         Bitmap result = Bitmap.createScaledBitmap(bitmap, (int) (bitmap.getWidth() * suggestedScale),
                 (int) (bitmap.getHeight() * suggestedScale), false);
-        bitmap.recycle();
         Rect src = new Rect((int) (0 + alignTranslateX), (int) (0 + alignTranslateY),
                 (int) (destWidth + alignTranslateX), (int) (destHeight + alignTranslateY));
         Log.v(TAG,src.toString());
+
+        recycleBitmap(bitmap);
         return new ImageArea(result, src);
     }
 
@@ -128,6 +137,7 @@ public class BitmapUtil {
         thumbCanvas.translate(alignTranslateX, alignTranslateY);
         thumbCanvas.drawBitmap(bitmap, 0, 0, null);
 
+        recycleBitmap(bitmap);
         return resultBitmap;
     }
 
@@ -139,7 +149,6 @@ public class BitmapUtil {
         float destinationRatio = (float) destWidth / (float) destHeight;
         if (bitmapRatio > destinationRatio) {
             suggestedScale = (float) destWidth / (float) bitmap.getWidth();
-            alignTranslateX = 0f;
             alignTranslateY = -(bitmap.getHeight() * suggestedScale - destHeight) / 2;
             if (alignTranslateY < 0) {
                 alignTranslateY = 0;
@@ -147,16 +156,15 @@ public class BitmapUtil {
         } else {
             suggestedScale = (float) destHeight / (float) bitmap.getHeight();
             alignTranslateX = -(bitmap.getWidth() * suggestedScale - destWidth) / 2;
-            alignTranslateY = 0f;
             if (alignTranslateX < 0) {
                 alignTranslateX = 0;
             }
         }
         Bitmap result = Bitmap.createScaledBitmap(bitmap, (int) (bitmap.getWidth() * suggestedScale),
                 (int) (bitmap.getHeight() * suggestedScale), false);
-        Rect src = new Rect((int) (0 - alignTranslateX), (int) (0 - alignTranslateY),
-                (int) (destWidth - alignTranslateX), (int) (destHeight - alignTranslateY));
+        Rect src = new Rect(0,0,result.getWidth(),result.getHeight());
 
+        recycleBitmap(bitmap);
         return new ImageArea(result, src);
     }
 
@@ -200,7 +208,7 @@ public class BitmapUtil {
 
         if (height > reqHeight || width > reqWidth) {
             final int halfHeight = height >> 1;
-            final int halfWeight = width / 2;
+            final int halfWeight = width >> 1;
 
             while (halfHeight / inSampleSize > reqHeight && halfWeight / inSampleSize > reqWidth) {
                 inSampleSize *= 2;
@@ -208,11 +216,12 @@ public class BitmapUtil {
         }
 
         long totalPixels = height * width / inSampleSize;
-        final long reqTotalPixelsCap = reqHeight * reqWidth * 2;
+        final long reqTotalPixelsCap = reqHeight * reqWidth * 3;
         while (totalPixels > reqTotalPixelsCap) {
             totalPixels *= 0.5;
             inSampleSize *= 2;
         }
+
         return inSampleSize;
     }
 
@@ -248,10 +257,12 @@ public class BitmapUtil {
             Paint paint = new Paint();
             canvas.translate(30 * (size - 1), 0);
             for (int i = 0; i < bitmaps.length; i++) {
-                // canvas.drawBitmap(bitmaps[i], 0, 0, paint);
-                canvas.drawBitmap(Bitmap.createScaledBitmap(bitmaps[i], destWidth - 30 * (size - 1),
-                        destHeight - 30 * (size - 1), false), 0, 0, paint);
+//                canvas.drawBitmap(Bitmap.createScaledBitmap(bitmaps[i], destWidth - 30 * (size - 1),
+//                        destHeight - 30 * (size - 1), false), 0, 0, paint);
+                canvas.drawBitmap(decodeWithFillRatio(bitmaps[i], destWidth - 30 * (size - 1),
+                        destHeight - 30 * (size - 1)), 0, 0, paint);
                 canvas.translate(-30, 30);
+                recycleBitmap(bitmaps[i]);
             }
             canvas.restore();
         }

@@ -10,8 +10,7 @@ import android.view.MotionEvent;
 import android.widget.OverScroller;
 import android.widget.Toast;
 
-import com.example.administrator.album.adapter.MyImageAdapter;
-import com.example.administrator.album.animator.AlphaAnimator;
+import com.example.administrator.album.adapter.ImageAdapter;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-24.
@@ -26,20 +25,25 @@ public class AlbumPage extends LHView {
     private final static int DEFAULT_TEST_ALBUM_ID = -17_3977_3001;
     private static final int FLING_VELOCITY_DOWNSCALE = 3;
 
-    private int endLine = ANCHOR;
-    private int thumbWidth;
-    private int thumbHeight;
+    private int mEndline = ANCHOR;
+    private int mThumbWidth;
+    private int mThumbHeight;
 
     private Rect mDisplayBound;
     private GestureDetectorCompat mDetector;
 
-    private MyImageAdapter mAdapter;
+    private ImageAdapter mAdapter;
     private OverScroller mScroller;
 
     private Callback mCallback;
+    private Context mContext;
+
+    private int mAlbumId = DEFAULT_TEST_ALBUM_ID;
+
+    private boolean mInitFlag = true;
 
     public interface Callback {
-        void headToImage(ImageArea item);
+        void headToImage(int albumId,ImageArea item);
     }
 
     public AlbumPage(Context context, Callback callback) {
@@ -48,16 +52,32 @@ public class AlbumPage extends LHView {
     }
 
     private void init(Context context, Callback callback) {
+        mContext = context;
         mCallback = callback;
         mDisplayBound = new Rect(0, 0, 0, 0);
-        mAdapter = new MyImageAdapter(context, DEFAULT_TEST_ALBUM_ID);
+        mAdapter = new ImageAdapter(context, DEFAULT_TEST_ALBUM_ID);
         mDetector = new GestureDetectorCompat(context, new AlbumGestureListener());
         mScroller = new OverScroller(context);
-        setDrawingCacheEnabled(true);
     }
 
-    public void show() {
+    public void setAlbum(int albumId){
+        mAdapter = new ImageAdapter(mContext,albumId);
+        mAlbumId = albumId;
+        refreshParams();
+//        invalidate();
+    }
+
+    public void show(int position) {
+        int datum = (position / COLUMN) * (mThumbHeight + LINE_MARGIN);
+        if (datum < mDisplayBound.top) {
+            int delta = datum - mDisplayBound.top;
+            adjustDisplayingBound(delta);
+        } else if (datum > mDisplayBound.bottom) {
+            int delta = datum - mDisplayBound.bottom + mThumbHeight;
+            adjustDisplayingBound(delta);
+        }
         refreshDisplayingItem();
+        this.setVisibility(VISIBLE);
         fadein();
     }
 
@@ -67,17 +87,22 @@ public class AlbumPage extends LHView {
             invalidate();
         }
 
-        if (0 == mDisplayBound.height()) {
-            mDisplayBound.right = getWidth();
-            mDisplayBound.bottom = getHeight();
-            thumbWidth = (mDisplayBound.width() - (COLUMN - 1) * COLUMN_MARGIN) / COLUMN;
-            thumbHeight = thumbWidth;
-            endLine = (mAdapter.getCount() / COLUMN) * (thumbHeight + LINE_MARGIN) + thumbHeight;
-            endLine = endLine < mDisplayBound.height() ? mDisplayBound.height() : endLine;
-            refreshDisplayingItem();
+        if (mInitFlag) {
+            refreshParams();
+            mInitFlag = false;
         }
 
         super.onDraw(canvas);
+    }
+
+    private void refreshParams(){
+        mDisplayBound.right = getWidth();
+        mDisplayBound.bottom = getHeight();
+        mThumbWidth = (mDisplayBound.width() - (COLUMN - 1) * COLUMN_MARGIN) / COLUMN;
+        mThumbHeight = mThumbWidth;
+        mEndline = (mAdapter.getCount() / COLUMN) * (mThumbHeight + LINE_MARGIN) + mThumbHeight;
+        mEndline = mEndline < mDisplayBound.height() ? mDisplayBound.height() : mEndline;
+        refreshDisplayingItem();
     }
 
     private void adjustDisplayingBound(int deltaY) {
@@ -93,8 +118,8 @@ public class AlbumPage extends LHView {
             mDisplayBound.top -= delta;
             mDisplayBound.bottom -= delta;
         }
-        if (endLine < mDisplayBound.bottom) {
-            int delta = mDisplayBound.bottom - endLine;
+        if (mEndline < mDisplayBound.bottom) {
+            int delta = mDisplayBound.bottom - mEndline;
             mDisplayBound.top -= delta;
             mDisplayBound.bottom -= delta;
         }
@@ -109,22 +134,27 @@ public class AlbumPage extends LHView {
         @Override
         public boolean onSingleTapConfirmed(MotionEvent event) {
             int position = (int) (((mDisplayBound.top + event.getY())
-                    / (thumbHeight + LINE_MARGIN))) * COLUMN
-                    + (int) (event.getX() / (thumbWidth + COLUMN_MARGIN));
+                    / (mThumbHeight + LINE_MARGIN))) * COLUMN
+                    + (int) (event.getX() / (mThumbWidth + COLUMN_MARGIN));
             Toast.makeText(getContext(), position + "clicked", Toast.LENGTH_SHORT).show();
             ImageArea mTarget = null;
-            for (ImageArea child : mChildren) {
-                if (position == child.getPosition()) {
-                    mTarget = child;
+            for (LHItem child : mChildren) {
+                if (position == ((ImageArea)child).getPosition()) {
+                    mTarget = (ImageArea)child;
                     break;
                 }
             }
             if (null == mTarget) {
                 return true;
             }
-//            fadeout();
-            AlbumPage.this.setVisibility(GONE);
-            mCallback.headToImage(mTarget);
+            mCallback.headToImage(mAlbumId,new ImageArea(mTarget));
+            fadeout(new AnimationCallback() {
+                @Override
+                public void animationFinished() {
+                    setVisibility(GONE);
+                }
+            });
+            mTarget.setAlpha(0);
             return true;
         }
 
@@ -156,12 +186,12 @@ public class AlbumPage extends LHView {
 
     @Override
     public void refreshDisplayingItem() {
-        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (thumbHeight + LINE_MARGIN))
+        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (mThumbHeight + LINE_MARGIN))
                 + COLUMN;
-        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (thumbHeight + LINE_MARGIN));
-        if (0 != (mDisplayBound.top - ANCHOR) % (thumbHeight + LINE_MARGIN)) {
-            pastThumbAmount -= 4;
-            singlePageThumbAmount += 8;
+        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (mThumbHeight + LINE_MARGIN));
+        if (0 != (mDisplayBound.top - ANCHOR) % (mThumbHeight + LINE_MARGIN)) {
+            pastThumbAmount -= COLUMN;
+            singlePageThumbAmount += COLUMN * 2;
         }
         if (pastThumbAmount < 0) {
             pastThumbAmount = 0;
@@ -174,13 +204,13 @@ public class AlbumPage extends LHView {
         mChildren.clear();
         for (int i = pastThumbAmount; mAdapter.getCount() > i
                 && i < pastThumbAmount + singlePageThumbAmount; i++) {
-            float x = (i % COLUMN) * thumbWidth + (i % COLUMN - 1) * COLUMN_MARGIN;
-            float y = (i / COLUMN) * (thumbHeight + LINE_MARGIN) + LINE_MARGIN - mDisplayBound.top;
-            ImageArea item = mAdapter.getImageArea(this, i, thumbWidth, thumbHeight);
+            float x = (i % COLUMN) * (mThumbWidth + COLUMN_MARGIN);
+            float y = (i / COLUMN) * (mThumbHeight + LINE_MARGIN) - mDisplayBound.top;
+            ImageArea item = mAdapter.getImageArea(this, i, mThumbWidth, mThumbHeight);
             if (null != item) {
                 item.setPosition(i);
-                Rect dest = new Rect((int) x, (int) y, (int) (x + thumbWidth),
-                        (int) (y + thumbHeight));
+                Rect dest = new Rect((int) x, (int) y, (int) (x + mThumbWidth),
+                        (int) (y + mThumbHeight));
                 item.setDestBound(dest);
                 mChildren.add(item);
             }
@@ -202,5 +232,24 @@ public class AlbumPage extends LHView {
                 scroll(oldy - mScroller.getCurrY());
             }
         }
+    }
+
+    public ImageArea.ImageAreaAttribute getLocation(int position) {
+        if(null != mChildren && !mChildren.isEmpty()){
+            for(LHItem child : mChildren){
+                if(position == ((ImageArea)child).getPosition()){
+                    return ((ImageArea)child).getAttribute();
+                }
+            }
+        }
+        return null;
+    }
+
+    public void setInitFlag(boolean init){
+        this.mInitFlag = init;
+    }
+
+    public void backToAlbumSet(){
+
     }
 }

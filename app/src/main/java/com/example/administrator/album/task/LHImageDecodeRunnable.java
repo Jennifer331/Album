@@ -1,4 +1,4 @@
-package com.example.administrator.album;
+package com.example.administrator.album.task;
 
 import com.example.administrator.album.view.LHView;
 
@@ -11,7 +11,13 @@ public abstract class LHImageDecodeRunnable implements Runnable {
     protected int height;
     protected LHView view;
 
-    public abstract String getPath();
-    public abstract int getWidth();
-    public abstract int getHeight();
+    public String getPath(){
+        return path;
+    };
+    public int getWidth(){
+        return width;
+    }
+    public int getHeight(){
+        return height;
+    }
 }

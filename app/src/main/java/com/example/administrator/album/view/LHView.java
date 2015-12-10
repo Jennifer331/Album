@@ -2,11 +2,13 @@ package com.example.administrator.album.view;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
 import com.example.administrator.album.animator.AlphaAnimator;
+import com.example.administrator.album.animator.ScaleAnimator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,9 +22,10 @@ public class LHView extends View {
     private static final int SHOW_ALPHA = 255;
     private static final int HIDE_ALPHA = 0;
 
-    protected List<ImageArea> mChildren;
+    protected List<LHItem> mChildren;
+    private AnimationCallback mCallback;
 
-    private boolean mFadeOutFlag = false;
+    private boolean mAnimationFlag = false;
 
     public LHView(Context context) {
         this(context, null);
@@ -45,35 +48,41 @@ public class LHView extends View {
         mChildren = new ArrayList<>();
     }
 
+    public interface AnimationCallback {
+        public void animationFinished();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
-        Log.v(TAG,"in onDraw");
+        Log.v(TAG, "in onDraw");
         boolean hasMoreFrame = false;
-        if(null != mChildren && !mChildren.isEmpty()){
-            for(ImageArea item:mChildren){
-                if(null != item) {
+        if (null != mChildren && !mChildren.isEmpty()) {
+            for (LHItem item : mChildren) {
+                if (null != item) {
                     hasMoreFrame |= item.draw(canvas);
                 }
             }
         }
         if (hasMoreFrame) {
             invalidate();
-        }else{
-            if(mFadeOutFlag) {
-                this.setVisibility(GONE);
-                Log.v(TAG,"gone");
-                mFadeOutFlag = false;
+        } else {
+            if (mAnimationFlag) {
+                if (null != mCallback) {
+                    mCallback.animationFinished();
+                }
+                Log.v(TAG, "gone");
+                mAnimationFlag = false;
             }
         }
     }
 
-    protected void fadein() {
+    public void fadein() {
         this.setVisibility(VISIBLE);
-        mFadeOutFlag = false;
-        AlphaAnimator animator = new AlphaAnimator(SHOW_ALPHA);
+        mAnimationFlag = false;
         if (null != mChildren && !mChildren.isEmpty()) {
-            for (ImageArea item : mChildren) {
+            for (LHItem item : mChildren) {
                 if (null != item) {
+                    AlphaAnimator animator = new AlphaAnimator(item.getAlpha(), SHOW_ALPHA);
                     item.addAnimator(animator);
                 }
             }
@@ -81,13 +90,14 @@ public class LHView extends View {
         invalidate();
     }
 
-    protected void fadeout() {
-        mFadeOutFlag = true;
-        Log.v(TAG,"fadeout");
-        AlphaAnimator animator = new AlphaAnimator(HIDE_ALPHA);
+    protected void fadeout(AnimationCallback callback) {
+        mCallback = callback;
+        mAnimationFlag = true;
+        Log.v(TAG, "fadeout");
         if (null != mChildren && !mChildren.isEmpty()) {
-            for (ImageArea item : mChildren) {
+            for (LHItem item : mChildren) {
                 if (null != item) {
+                    AlphaAnimator animator = new AlphaAnimator(item.getAlpha(), HIDE_ALPHA);
                     item.addAnimator(animator);
                 }
             }
@@ -95,7 +105,23 @@ public class LHView extends View {
         invalidate();
     }
 
-    protected void refreshDisplayingItem(){
+    public void radiation(Rect srcLocation) {
+        mAnimationFlag = true;
+        int counter = 0;
+        if (null != mChildren && !mChildren.isEmpty()) {
+            for (LHItem item : mChildren) {
+                Log.v(TAG,counter + "");
+                if (null != item && item instanceof ImageArea) {
+                    Log.v(TAG,counter++ + "");
+                    ScaleAnimator animator = new ScaleAnimator(null, null,
+                            srcLocation, ((ImageArea) item).getDestBound());
+                    item.addAnimator(animator);
+                }
+            }
+        }
+    }
+
+    protected void refreshDisplayingItem() {
 
     }
 
