@@ -12,6 +12,7 @@ import java.util.List;
  * Created by Lei Xiaoyue on 2015-12-01.
  */
 public class LHItem {
+    private boolean mHideFlag;
     protected List<LHAnimator> animators;
     protected Paint paint;
 
@@ -31,6 +32,14 @@ public class LHItem {
         }else {
             this.paint = new Paint(paint);
         }
+    }
+
+    public void setHideFlag(boolean hide){
+        mHideFlag = hide;
+    }
+
+    public boolean isHide(){
+        return mHideFlag;
     }
 
     public boolean draw(Canvas canvas) {

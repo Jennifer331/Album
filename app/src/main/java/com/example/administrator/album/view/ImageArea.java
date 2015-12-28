@@ -43,7 +43,7 @@ public class ImageArea extends LHItem {
     }
 
     public ImageArea(int position, Bitmap src, Rect srcBound, Rect destBound,
-            List<LHAnimator> animators) {
+                     List<LHAnimator> animators) {
         mPosition = position;
         if (null != src) {
             mSrc = src;
@@ -79,9 +79,11 @@ public class ImageArea extends LHItem {
                     }
                 }
             }
-            canvas.save();
-            canvas.drawBitmap(mSrc, mSrcBound, mDestBound, paint);
-            canvas.restore();
+            if(!isHide()) {
+                canvas.save();
+                canvas.drawBitmap(mSrc, mSrcBound, mDestBound, paint);
+                canvas.restore();
+            }
         }
         if (!hasMoreFrame && null != animators) {
             animators.clear();
@@ -250,7 +252,7 @@ public class ImageArea extends LHItem {
         public boolean mFullSizeFlag = false;
 
         public ImageAreaAttribute(int position, Rect srcBound, Rect destBound, float xPortion,
-                float yPortion, boolean fullFlag) {
+                                  float yPortion, boolean fullFlag) {
             mPosition = position;
             if (null != srcBound) {
                 mSrcBound = new Rect(srcBound);

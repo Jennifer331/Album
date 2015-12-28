@@ -25,7 +25,7 @@ public class ImageAdapter {
 
     public ImageAdapter(Context context, int albumId) {
         mData = new ArrayList<Image>();
-        mContext = context;
+        mContext = context.getApplicationContext();
         mAlbumId = albumId;
         loader = BitmapLoader.getInstance();
         loadData(mAlbumId);

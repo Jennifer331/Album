@@ -52,6 +52,18 @@ public class LHView extends View {
         public void animationFinished();
     }
 
+    public void showAll(){
+        if (null != mChildren && !mChildren.isEmpty()) {
+            for (LHItem item : mChildren) {
+                if (null != item && item instanceof ImageArea) {
+                    item.setHideFlag(false);
+                    item.setAlpha(SHOW_ALPHA);
+                }
+            }
+        }
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         Log.v(TAG, "in onDraw");
@@ -69,6 +81,7 @@ public class LHView extends View {
             if (mAnimationFlag) {
                 if (null != mCallback) {
                     mCallback.animationFinished();
+                    mCallback = null;
                 }
                 Log.v(TAG, "gone");
                 mAnimationFlag = false;
@@ -77,16 +90,17 @@ public class LHView extends View {
     }
 
     public void fadein() {
-        this.setVisibility(VISIBLE);
         mAnimationFlag = false;
         if (null != mChildren && !mChildren.isEmpty()) {
             for (LHItem item : mChildren) {
                 if (null != item) {
+                    item.setAlpha(HIDE_ALPHA);
                     AlphaAnimator animator = new AlphaAnimator(item.getAlpha(), SHOW_ALPHA);
                     item.addAnimator(animator);
                 }
             }
         }
+        this.setVisibility(VISIBLE);
         invalidate();
     }
 

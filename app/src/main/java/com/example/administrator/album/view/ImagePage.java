@@ -25,8 +25,6 @@ public class ImagePage extends LHView {
     private static final int FADE_OUT_BEGIN_ALPHA = 0;
     private static final int FADE_OUT_END_ALPHA = 255;
     private static final int FLING_VELOCITY_DOWNSCALE = 3;
-    private final static int SHOW_ALPHA = 255;
-    private final static int HIDE_ALPHA = 0;
 
     private ImageAdapter mAdapter;
     private Rect mEndSrcBound;
@@ -37,6 +35,7 @@ public class ImagePage extends LHView {
 
     private static final int ANCHOR = 0;
     private static final int MARGIN = 20;
+    private int mScrollerBound;//limits the farest place the scroller can go
 
     private ImageArea mThumb;
 
@@ -44,13 +43,16 @@ public class ImagePage extends LHView {
         public void backToAlbum(int position);
 
         public ImageArea.ImageAreaAttribute getAnimationDestBound(int position);
+
+        public void animationFinished();
     }
 
-    public ImagePage(Context context, Callback callback, int albumId, ImageArea item) {
+    public ImagePage(Context context, ImageAdapter adapter, Callback callback, int albumId, ImageArea item) {
         super(context);
         mContext = context;
         mEndSrcBound = new Rect();
-        mAdapter = new ImageAdapter(context, albumId);
+        mAdapter = adapter;
+        refreshScrollBound();
         this.mCallback = callback;
         mDetector = new GestureDetectorCompat(context, new ImageGestureListener());
         mThumb = item;
@@ -67,7 +69,7 @@ public class ImagePage extends LHView {
     protected void onDraw(Canvas canvas) {
         if (mScroller.computeScrollOffset()) {
             invalidate();
-        } else {
+        }else {
             checkLimitBound();
         }
         refreshDisplayingItem();
@@ -78,7 +80,7 @@ public class ImagePage extends LHView {
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
         if (MotionEvent.ACTION_CANCEL == action || MotionEvent.ACTION_UP == action) {
-            checkLimitBound();
+            springBack();
         }
         return mDetector.onTouchEvent(event);
     }
@@ -173,8 +175,9 @@ public class ImagePage extends LHView {
         }
     }
 
-    public void show(int albumId, ImageArea item, boolean scale, boolean alpha) {
-        mAdapter = new ImageAdapter(mContext, albumId);
+    public void show(ImageAdapter adapter, int albumId, ImageArea item, boolean scale, boolean alpha) {
+        mAdapter = adapter;
+        refreshScrollBound();
         show(item, scale, alpha);
     }
 
@@ -201,6 +204,16 @@ public class ImagePage extends LHView {
         invalidate();
     }
 
+    /**
+     * calculates and sets the variable mScrollerBound
+     * by multipling the width of screen by the amount of pics
+     */
+    private void refreshScrollBound() {
+        if (null != mAdapter) {
+            mScrollerBound = (mAdapter.getCount() - 1) * getWidth();
+        }
+    }
+
     public class ImageGestureListener extends GestureDetector.SimpleOnGestureListener {
         @Override
         public boolean onDown(MotionEvent e) {
@@ -225,7 +238,7 @@ public class ImagePage extends LHView {
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             mScroller.forceFinished(true);
             mScroller.fling(mScroller.getCurrX(), 0, -(int) (velocityX / FLING_VELOCITY_DOWNSCALE),
-                    0, Integer.MIN_VALUE, Integer.MAX_VALUE, 0, 0);
+                    0, 0, mScrollerBound, 0, 0);
             invalidate();
             return true;
         }
@@ -270,12 +283,17 @@ public class ImagePage extends LHView {
                 invalidate();
             }
         }
-        invalidate();
     }
 
-    public void backToAlbum(){
+    private void springBack(){
+        if(mScroller.springBack(mScroller.getCurrX(),0,0,mScrollerBound,0,0)) {
+            invalidate();
+        }
+    }
+
+    public void backToAlbum() {
         Log.v(TAG, "Scroller currentX:" + mScroller.getCurrX());
-        int position = (int) (mScroller.getCurrX() / (getWidth() + MARGIN));
+        final int position = (int) (mScroller.getCurrX() / (getWidth() + MARGIN));
 
         ImageArea.ImageAreaAttribute attribute = mCallback.getAnimationDestBound(position);
         if (null != mChildren && !mChildren.isEmpty() && null != attribute) {
@@ -297,7 +315,7 @@ public class ImagePage extends LHView {
                             new ScaleAnimator.Callback() {
                                 @Override
                                 public void animationFinished() {
-                                    setVisibility(GONE);
+                                    mCallback.animationFinished();
                                 }
                             });
                     child.addAnimator(scaleAnimator);

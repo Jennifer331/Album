@@ -11,6 +11,7 @@ import android.view.Window;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
+import com.example.administrator.album.adapter.ImageAdapter;
 import com.example.administrator.album.view.AlbumPage;
 import com.example.administrator.album.view.AlbumSetPage;
 import com.example.administrator.album.view.ImageArea;
@@ -54,14 +55,13 @@ public class TestActivity extends Activity implements AlbumSetPage.Callback, Alb
     }
 
     @Override
-    public void headToImage(int albumId, ImageArea item) {
-        // mAlbumPage.saveState();
+    public void headToImage(ImageAdapter adapter,int albumId, ImageArea item) {
         if (null == mImagePage) {
-            mImagePage = new ImagePage(getApplicationContext(), this, albumId, item);
+            mImagePage = new ImagePage(getApplicationContext(), adapter,this, albumId, item);
             mLayout.addView(mImagePage, mPageParams);
         } else {
             mImagePage.setVisibility(View.VISIBLE);
-            mImagePage.show(albumId, item, true, true);
+            mImagePage.show(adapter,albumId, item, true, true);
             mStatus = STATUS.IMAGE;
         }
 
@@ -77,6 +77,12 @@ public class TestActivity extends Activity implements AlbumSetPage.Callback, Alb
             mStatus = STATUS.ALBUM;
             mAlbumPage.show(position);
         }
+    }
+
+    @Override
+    public void animationFinished() {
+        mAlbumPage.showAll();
+        mImagePage.setVisibility(View.INVISIBLE);
     }
 
     @Override

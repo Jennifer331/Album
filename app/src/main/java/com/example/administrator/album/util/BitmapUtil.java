@@ -259,10 +259,12 @@ public class BitmapUtil {
             for (int i = 0; i < bitmaps.length; i++) {
 //                canvas.drawBitmap(Bitmap.createScaledBitmap(bitmaps[i], destWidth - 30 * (size - 1),
 //                        destHeight - 30 * (size - 1), false), 0, 0, paint);
-                canvas.drawBitmap(decodeWithFillRatio(bitmaps[i], destWidth - 30 * (size - 1),
-                        destHeight - 30 * (size - 1)), 0, 0, paint);
-                canvas.translate(-30, 30);
-                recycleBitmap(bitmaps[i]);
+                if(null != bitmaps[i]) {
+                    canvas.drawBitmap(decodeWithFillRatio(bitmaps[i], destWidth - 30 * (size - 1),
+                            destHeight - 30 * (size - 1)), 0, 0, paint);
+                    canvas.translate(-30, 30);
+                    recycleBitmap(bitmaps[i]);
+                }
             }
             canvas.restore();
         }

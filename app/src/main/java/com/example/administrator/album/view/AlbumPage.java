@@ -11,6 +11,7 @@ import android.widget.OverScroller;
 import android.widget.Toast;
 
 import com.example.administrator.album.adapter.ImageAdapter;
+import com.example.administrator.album.animator.AlphaAnimator;
 
 /**
  * Created by Lei Xiaoyue on 2015-11-24.
@@ -43,7 +44,7 @@ public class AlbumPage extends LHView {
     private boolean mInitFlag = true;
 
     public interface Callback {
-        void headToImage(int albumId,ImageArea item);
+        void headToImage(ImageAdapter adapter,int albumId, ImageArea item);
     }
 
     public AlbumPage(Context context, Callback callback) {
@@ -54,17 +55,15 @@ public class AlbumPage extends LHView {
     private void init(Context context, Callback callback) {
         mContext = context;
         mCallback = callback;
-        mDisplayBound = new Rect(0, 0, 0, 0);
         mAdapter = new ImageAdapter(context, DEFAULT_TEST_ALBUM_ID);
         mDetector = new GestureDetectorCompat(context, new AlbumGestureListener());
         mScroller = new OverScroller(context);
     }
 
-    public void setAlbum(int albumId){
-        mAdapter = new ImageAdapter(mContext,albumId);
+    public void setAlbum(int albumId) {
+        mAdapter = new ImageAdapter(mContext, albumId);
         mAlbumId = albumId;
         refreshParams();
-//        invalidate();
     }
 
     public void show(int position) {
@@ -77,8 +76,40 @@ public class AlbumPage extends LHView {
             adjustDisplayingBound(delta);
         }
         refreshDisplayingItem();
-        this.setVisibility(VISIBLE);
-        fadein();
+        fadein(position);
+    }
+
+    /**
+     * Shows the items(except which in the exception scope) with fade in animation
+     *
+     * @param exceptions
+     */
+    private void fadein(int... exceptions) {
+        if (null != mChildren && !mChildren.isEmpty()) {
+            for (LHItem item : mChildren) {
+                if (null != item && item instanceof ImageArea
+                        && inScope(((ImageArea) item).getPosition(), exceptions)) {
+                    item.setHideFlag(true);
+                }
+            }
+        }
+        super.fadein();
+    }
+
+    /**
+     * Checks if this number is in the exception scope
+     *
+     * @param target     number to be find
+     * @param exceptions exception scope
+     * @return if this number not in return false
+     */
+    private boolean inScope(int target, int[] exceptions) {
+        for (int i : exceptions) {
+            if (target == i) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -95,7 +126,9 @@ public class AlbumPage extends LHView {
         super.onDraw(canvas);
     }
 
-    private void refreshParams(){
+
+    private void refreshParams() {
+        mDisplayBound = new Rect(0, 0, 0, 0);
         mDisplayBound.right = getWidth();
         mDisplayBound.bottom = getHeight();
         mThumbWidth = (mDisplayBound.width() - (COLUMN - 1) * COLUMN_MARGIN) / COLUMN;
@@ -103,6 +136,39 @@ public class AlbumPage extends LHView {
         mEndline = (mAdapter.getCount() / COLUMN) * (mThumbHeight + LINE_MARGIN) + mThumbHeight;
         mEndline = mEndline < mDisplayBound.height() ? mDisplayBound.height() : mEndline;
         refreshDisplayingItem();
+    }
+
+    @Override
+    public void refreshDisplayingItem() {
+        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (mThumbHeight + LINE_MARGIN))
+                + COLUMN;
+        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (mThumbHeight + LINE_MARGIN));
+        if (0 != (mDisplayBound.top - ANCHOR) % (mThumbHeight + LINE_MARGIN)) {
+            pastThumbAmount -= COLUMN;
+            singlePageThumbAmount += COLUMN * 2;
+        }
+        if (pastThumbAmount < 0) {
+            pastThumbAmount = 0;
+        }
+        if (mAdapter.getCount() < pastThumbAmount + singlePageThumbAmount) {
+            // TODO
+        }
+        if (singlePageThumbAmount <= 0)
+            return;
+        mChildren.clear();
+        for (int i = pastThumbAmount; mAdapter.getCount() > i
+                && i < pastThumbAmount + singlePageThumbAmount; i++) {
+            float x = (i % COLUMN) * (mThumbWidth + COLUMN_MARGIN);
+            float y = (i / COLUMN) * (mThumbHeight + LINE_MARGIN) - mDisplayBound.top;
+            ImageArea item = mAdapter.getImageArea(this, i, mThumbWidth, mThumbHeight);
+            if (null != item) {
+                item.setPosition(i);
+                Rect dest = new Rect((int) x, (int) y, (int) (x + mThumbWidth),
+                        (int) (y + mThumbHeight));
+                item.setDestBound(dest);
+                mChildren.add(item);
+            }
+        }
     }
 
     private void adjustDisplayingBound(int deltaY) {
@@ -139,15 +205,15 @@ public class AlbumPage extends LHView {
             Toast.makeText(getContext(), position + "clicked", Toast.LENGTH_SHORT).show();
             ImageArea mTarget = null;
             for (LHItem child : mChildren) {
-                if (position == ((ImageArea)child).getPosition()) {
-                    mTarget = (ImageArea)child;
+                if (position == ((ImageArea) child).getPosition()) {
+                    mTarget = (ImageArea) child;
                     break;
                 }
             }
             if (null == mTarget) {
                 return true;
             }
-            mCallback.headToImage(mAlbumId,new ImageArea(mTarget));
+            mCallback.headToImage(mAdapter,mAlbumId, new ImageArea(mTarget));
             fadeout(new AnimationCallback() {
                 @Override
                 public void animationFinished() {
@@ -185,39 +251,6 @@ public class AlbumPage extends LHView {
     }
 
     @Override
-    public void refreshDisplayingItem() {
-        int singlePageThumbAmount = COLUMN * (mDisplayBound.height() / (mThumbHeight + LINE_MARGIN))
-                + COLUMN;
-        int pastThumbAmount = COLUMN * ((mDisplayBound.top - ANCHOR) / (mThumbHeight + LINE_MARGIN));
-        if (0 != (mDisplayBound.top - ANCHOR) % (mThumbHeight + LINE_MARGIN)) {
-            pastThumbAmount -= COLUMN;
-            singlePageThumbAmount += COLUMN * 2;
-        }
-        if (pastThumbAmount < 0) {
-            pastThumbAmount = 0;
-        }
-        if (mAdapter.getCount() < pastThumbAmount + singlePageThumbAmount) {
-            // TODO
-        }
-        if (singlePageThumbAmount <= 0)
-            return;
-        mChildren.clear();
-        for (int i = pastThumbAmount; mAdapter.getCount() > i
-                && i < pastThumbAmount + singlePageThumbAmount; i++) {
-            float x = (i % COLUMN) * (mThumbWidth + COLUMN_MARGIN);
-            float y = (i / COLUMN) * (mThumbHeight + LINE_MARGIN) - mDisplayBound.top;
-            ImageArea item = mAdapter.getImageArea(this, i, mThumbWidth, mThumbHeight);
-            if (null != item) {
-                item.setPosition(i);
-                Rect dest = new Rect((int) x, (int) y, (int) (x + mThumbWidth),
-                        (int) (y + mThumbHeight));
-                item.setDestBound(dest);
-                mChildren.add(item);
-            }
-        }
-    }
-
-    @Override
     public boolean onTouchEvent(MotionEvent event) {
         return this.mDetector.onTouchEvent(event);
     }
@@ -235,21 +268,13 @@ public class AlbumPage extends LHView {
     }
 
     public ImageArea.ImageAreaAttribute getLocation(int position) {
-        if(null != mChildren && !mChildren.isEmpty()){
-            for(LHItem child : mChildren){
-                if(position == ((ImageArea)child).getPosition()){
-                    return ((ImageArea)child).getAttribute();
+        if (null != mChildren && !mChildren.isEmpty()) {
+            for (LHItem child : mChildren) {
+                if (position == ((ImageArea) child).getPosition()) {
+                    return ((ImageArea) child).getAttribute();
                 }
             }
         }
         return null;
-    }
-
-    public void setInitFlag(boolean init){
-        this.mInitFlag = init;
-    }
-
-    public void backToAlbumSet(){
-
     }
 }

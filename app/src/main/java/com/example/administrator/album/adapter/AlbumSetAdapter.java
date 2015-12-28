@@ -96,13 +96,19 @@ public class AlbumSetAdapter {
         Cursor profileCursor = contentResolver.query(uri, Album.PROFILE_PROJECTION, idWhere,
                 new String[] { album.getAlbumId() + "" },
                 MediaStore.Images.Media.DATE_ADDED + " desc limit 3");
-        if (profileCursor != null && profileCursor.moveToFirst()) {
-            do {
-                String imagePath = profileCursor.getString(Album.ALBUM_DATA);
-                if (imagePath != null) {
-                    album.addProfileImage(imagePath);
-                }
-            } while (profileCursor.moveToNext());
+        try {
+            if (profileCursor != null && profileCursor.moveToFirst()) {
+                do {
+                    String imagePath = profileCursor.getString(Album.ALBUM_DATA);
+                    if (imagePath != null) {
+                        album.addProfileImage(imagePath);
+                    }
+                } while (profileCursor.moveToNext());
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally{
+            profileCursor.close();
         }
     }
 }
