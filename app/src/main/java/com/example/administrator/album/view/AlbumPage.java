@@ -76,7 +76,11 @@ public class AlbumPage extends LHView {
             adjustDisplayingBound(delta);
         }
         refreshDisplayingItem();
-        fadein(position);
+//        fadein(position);
+    }
+
+    public void fadeIn() {
+        fadein();
     }
 
     /**
@@ -213,14 +217,14 @@ public class AlbumPage extends LHView {
             if (null == mTarget) {
                 return true;
             }
-            mCallback.headToImage(mAdapter,mAlbumId, new ImageArea(mTarget));
+            mCallback.headToImage(mAdapter, mAlbumId, new ImageArea(mTarget));
+            mTarget.setAlpha(0);
             fadeout(new AnimationCallback() {
                 @Override
                 public void animationFinished() {
                     setVisibility(GONE);
                 }
             });
-            mTarget.setAlpha(0);
             return true;
         }
 

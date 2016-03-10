@@ -22,8 +22,6 @@ import java.util.List;
 public class ImagePage extends LHView {
     private final static String TAG = "ImagePage";
     private final static int DEFAULT_TEST_ALBUM_ID = -17_3977_3001;
-    private static final int FADE_OUT_BEGIN_ALPHA = 0;
-    private static final int FADE_OUT_END_ALPHA = 255;
     private static final int FLING_VELOCITY_DOWNSCALE = 3;
 
     private ImageAdapter mAdapter;
@@ -40,11 +38,13 @@ public class ImagePage extends LHView {
     private ImageArea mThumb;
 
     public interface Callback {
-        public void backToAlbum(int position);
+        void albumSync(int position);
 
-        public ImageArea.ImageAreaAttribute getAnimationDestBound(int position);
+        void backToAlbum(int position);
 
-        public void animationFinished();
+        ImageArea.ImageAreaAttribute getAnimationDestBound(int position);
+
+        void animationFinished();
     }
 
     public ImagePage(Context context, ImageAdapter adapter, Callback callback, int albumId, ImageArea item) {
@@ -295,6 +295,7 @@ public class ImagePage extends LHView {
         Log.v(TAG, "Scroller currentX:" + mScroller.getCurrX());
         final int position = (int) (mScroller.getCurrX() / (getWidth() + MARGIN));
 
+        mCallback.albumSync(position);
         ImageArea.ImageAreaAttribute attribute = mCallback.getAnimationDestBound(position);
         if (null != mChildren && !mChildren.isEmpty() && null != attribute) {
             for (LHItem child : mChildren) {

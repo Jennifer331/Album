@@ -59,7 +59,9 @@ public class TestActivity extends Activity implements AlbumSetPage.Callback, Alb
         if (null == mImagePage) {
             mImagePage = new ImagePage(getApplicationContext(), adapter,this, albumId, item);
             mLayout.addView(mImagePage, mPageParams);
-        } else {
+        }
+//        else
+        {
             mImagePage.setVisibility(View.VISIBLE);
             mImagePage.show(adapter,albumId, item, true, true);
             mStatus = STATUS.IMAGE;
@@ -68,14 +70,22 @@ public class TestActivity extends Activity implements AlbumSetPage.Callback, Alb
     }
 
     @Override
+    public void albumSync(int position) {
+        mAlbumPage.show(position);
+    }
+
+    @Override
     public void backToAlbum(int position) {
         if (null == mAlbumPage) {
             mAlbumPage = new AlbumPage(getApplicationContext(), this);
             mLayout.addView(mAlbumPage, mPageParams);
-        } else {
+        }
+//        else
+        {
             Log.v(TAG, "show position" + position);
             mStatus = STATUS.ALBUM;
-            mAlbumPage.show(position);
+//            mAlbumPage.show(position);
+            mAlbumPage.fadeIn();
         }
     }
 
